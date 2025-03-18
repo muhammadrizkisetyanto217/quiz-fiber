@@ -28,18 +28,6 @@ func UserRoutes(app *fiber.App, db *gorm.DB) {
 	protectedRoutes.Post("/logout", authController.Logout)                  // ✅ Logout User
 	protectedRoutes.Post("/change-password", authController.ChangePassword) // ✅ Ganti Password User
 
-	// 🔥 Setup UserController tanpa middleware
-	userController := controller.NewUserController(db)
-	userRoutes := app.Group("/api/users") // ❌ Middleware dihapus
-
-	userRoutes.Get("/", userController.GetUsers)         // ✅ Get semua users
-	userRoutes.Get("/:id", userController.GetUser)       // ✅ Get satu user berdasarkan ID
-	userRoutes.Post("/", userController.CreateUser)      // ✅ Tambah user
-	userRoutes.Put("/:id", userController.UpdateUser)    // ✅ Update user
-	userRoutes.Delete("/:id", userController.DeleteUser) // ✅ Hapus user
-
-
-
 	googleAuthController := controller.NewGoogleAuthController(db)
 
 	// Auth routes group
@@ -51,13 +39,21 @@ func UserRoutes(app *fiber.App, db *gorm.DB) {
 	authGoogle.Post("/logout", authController.Logout)
 	authGoogle.Post("/check-security", authController.CheckSecurityAnswer)
 	authGoogle.Post("/reset-password", authController.ResetPassword)
-	
+
 	// Google auth routes
 	authGoogle.Get("/google", googleAuthController.GoogleLogin)
 	authGoogle.Get("/google/callback", googleAuthController.GoogleCallback)
-	
+
 	// Protected routes
 	protected := app.Group("/user")
 	protected.Use(controller.AuthMiddleware(db))
 	protected.Post("/change-password", authController.ChangePassword)
+
+	// 🔥 Setup UserController (dengan middleware untuk proteksi API)
+	userController := controller.NewUserController(db)
+	userRoutes := app.Group("/api/users", controller.AuthMiddleware(db)) // ✅ Proteksi semua user route
+	userRoutes.Get("/", userController.GetUsers)                         // ✅ Get semua users (Hanya Admin)
+	userRoutes.Get("/:id", userController.GetUser)                       // ✅ Get satu user berdasarkan ID
+	userRoutes.Put("/:id", userController.UpdateUser)                    // ✅ Update user
+	userRoutes.Delete("/:id", userController.DeleteUser)                 // ✅ Hapus user
 }
