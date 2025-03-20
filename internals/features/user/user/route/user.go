@@ -1,8 +1,8 @@
 package route
 
 import (
-	"quiz-fiber/internals/features/user/user/controller"
-	// "quiz-fiber/internals/features/user/user/middleware"
+	userController "quiz-fiber/internals/features/user/user/controller"
+	authController "quiz-fiber/internals/features/user/auth/controller"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -13,45 +13,45 @@ import (
 func UserRoutes(app *fiber.App, db *gorm.DB) {
 
 	//* Dengan constructor
-	authController := controller.NewAuthController(db)
+	// authController := controller.NewAuthController(db)
 
-	// 🔥 Setup AuthController
-	auth := app.Group("/auth")
-	auth.Post("/register", authController.Register) // ✅ Register user baru
-	auth.Post("/login", authController.Login)       // ✅ Login user
+	// // 🔥 Setup AuthController
+	// auth := app.Group("/auth")
+	// auth.Post("/register", authController.Register) // ✅ Register user baru
+	// auth.Post("/login", authController.Login)       // ✅ Login user
 
-	auth.Post("/forgot-password/check", authController.CheckSecurityAnswer) // validasi email dan jawaban keamanan
-	auth.Post("/forgot-password/reset", authController.ResetPassword)       // reset password setelah validasi berhasil
+	// auth.Post("/forgot-password/check", authController.CheckSecurityAnswer) // validasi email dan jawaban keamanan
+	// auth.Post("/forgot-password/reset", authController.ResetPassword)       // reset password setelah validasi berhasil
 
-	// 🔥 Setup AuthController with middleware
-	protectedRoutes := app.Group("/api/auth", controller.AuthMiddleware(db))
-	protectedRoutes.Post("/logout", authController.Logout)                  // ✅ Logout User
-	protectedRoutes.Post("/change-password", authController.ChangePassword) // ✅ Ganti Password User
+	// // 🔥 Setup AuthController with middleware
+	// protectedRoutes := app.Group("/api/auth", controller.AuthMiddleware(db))
+	// protectedRoutes.Post("/logout", authController.Logout)                  // ✅ Logout User
+	// protectedRoutes.Post("/change-password", authController.ChangePassword) // ✅ Ganti Password User
 
-	googleAuthController := controller.NewGoogleAuthController(db)
+	// googleAuthController := controller.NewGoogleAuthController(db)
 
-	// Auth routes group
-	authGoogle := app.Group("/auth")
+	// // Auth routes group
+	// authGoogle := app.Group("/auth")
 
-	// Regular auth routes
-	authGoogle.Post("/register", authController.Register)
-	authGoogle.Post("/login", authController.Login)
-	authGoogle.Post("/logout", authController.Logout)
-	authGoogle.Post("/check-security", authController.CheckSecurityAnswer)
-	authGoogle.Post("/reset-password", authController.ResetPassword)
+	// // Regular auth routes
+	// authGoogle.Post("/register", authController.Register)
+	// authGoogle.Post("/login", authController.Login)
+	// authGoogle.Post("/logout", authController.Logout)
+	// authGoogle.Post("/check-security", authController.CheckSecurityAnswer)
+	// authGoogle.Post("/reset-password", authController.ResetPassword)
 
-	// Google auth routes
-	authGoogle.Get("/google", googleAuthController.GoogleLogin)
-	authGoogle.Get("/google/callback", googleAuthController.GoogleCallback)
+	// // Google auth routes
+	// authGoogle.Get("/google", googleAuthController.GoogleLogin)
+	// authGoogle.Get("/google/callback", googleAuthController.GoogleCallback)
 
-	// Protected routes
-	protected := app.Group("/user")
-	protected.Use(controller.AuthMiddleware(db))
-	protected.Post("/change-password", authController.ChangePassword)
+	// // Protected routes
+	// protected := app.Group("/user")
+	// protected.Use(controller.AuthMiddleware(db))
+	// protected.Post("/change-password", authController.ChangePassword)
 
 	// 🔥 Setup UserController (dengan middleware untuk proteksi API)
-	userController := controller.NewUserController(db)
-	userRoutes := app.Group("/api/users", controller.AuthMiddleware(db)) // ✅ Proteksi semua user route
+	userController := userController.NewUserController(db)
+	userRoutes := app.Group("/api/users", authController.AuthMiddleware(db)) // ✅ Proteksi semua user route
 	userRoutes.Get("/", userController.GetUsers)                         // ✅ Get semua users (Hanya Admin)
 	userRoutes.Get("/:id", userController.GetUser)                       // ✅ Get satu user berdasarkan ID
 	userRoutes.Put("/:id", userController.UpdateUser)                    // ✅ Update user

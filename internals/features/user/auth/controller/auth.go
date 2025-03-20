@@ -18,7 +18,8 @@ import (
 	"gorm.io/gorm"
 
 	"quiz-fiber/internals/configs"
-	"quiz-fiber/internals/features/user/user/models"
+	modelUser "quiz-fiber/internals/features/user/user/models"
+	modelAuth "quiz-fiber/internals/features/user/auth/models"
 )
 
 // 🔑 Load Secret Key dari Environment
@@ -34,7 +35,7 @@ func NewAuthController(db *gorm.DB) *AuthController {
 
 // 🔥 REGISTER USER
 func (ac *AuthController) Register(c *fiber.Ctx) error {
-	var input models.UserModel
+	var input modelUser.UserModel
 
 	if err := c.BodyParser(&input); err != nil {
 		log.Printf("[ERROR] Failed to parse request body: %v", err)
@@ -82,7 +83,7 @@ func (ac *AuthController) Login(c *fiber.Ctx) error {
 	}
 
 	// Cek user berdasarkan Email atau Nama
-	var user models.UserModel
+	var user modelUser.UserModel
 	if err := ac.DB.Where("email = ? OR user_name = ?", input.Identifier, input.Identifier).First(&user).Error; err != nil {
 		log.Printf("[ERROR] User not found: Identifier=%s", input.Identifier)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid email, username, or password"})
@@ -142,13 +143,13 @@ func (ac *AuthController) Logout(c *fiber.Ctx) error {
 	tokenString := tokenParts[1]
 
 	// Cek apakah token sudah ada di blacklist
-	var existingToken models.TokenBlacklist
+	var existingToken modelAuth.TokenBlacklist
 	if err := ac.DB.Where("token = ?", tokenString).First(&existingToken).Error; err == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Token already blacklisted"})
 	}
 
 	// Tambahkan token ke blacklist
-	blacklistToken := models.TokenBlacklist{
+	blacklistToken := modelAuth.TokenBlacklist{
 		Token:     tokenString,
 		ExpiredAt: time.Now().Add(96 * time.Hour), // Sesuai waktu expired token
 	}
@@ -189,7 +190,7 @@ func (ac *AuthController) ChangePassword(c *fiber.Ctx) error {
 	}
 
 	// 🔍 Cari user di database
-	var user models.UserModel
+	var user modelUser.UserModel
 	if err := ac.DB.First(&user, userID).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 	}
@@ -230,7 +231,7 @@ func (ac *AuthController) CheckSecurityAnswer(c *fiber.Ctx) error {
 	}
 
 	// 📌 Cek user berdasarkan email
-	var user models.UserModel
+	var user modelUser.UserModel
 	if err := ac.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
@@ -260,7 +261,7 @@ func (ac *AuthController) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	// 📌 Cek user berdasarkan email kembali untuk memastikan
-	var user models.UserModel
+	var user modelUser.UserModel
 	if err := ac.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
@@ -302,7 +303,7 @@ func AuthMiddleware(db *gorm.DB) fiber.Handler {
 		tokenString := tokenParts[1]
 
 		// 🔍 Cek apakah token sudah di blacklist
-		var existingToken models.TokenBlacklist
+		var existingToken modelAuth.TokenBlacklist
 		err := db.Where("token = ?", tokenString).First(&existingToken).Error
 
 		if err == nil {
