@@ -2,7 +2,8 @@ package routes
 
 import (
 	// Add this line.
-	"quiz-fiber/internals/features/user/user/route"
+	userRoute "quiz-fiber/internals/features/user/user/route"
+	authRoute "quiz-fiber/internals/features/user/auth/route"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -15,8 +16,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 		return c.SendString("Fiber & Supabase PostgreSQL connected successfully 🚀")
 	})
 
-	route.UserRoutes(app, db)
-
-
+	userRoute.UserRoutes(app, db)
+	authRoute.AuthRoutes(app, db)
 
 }

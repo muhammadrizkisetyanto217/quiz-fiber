@@ -10,7 +10,7 @@ import (
 
 // SetupRoutes mengatur routing untuk authentication dan user
 // SetupRoutes mengatur routing untuk user tanpa middleware
-func UserRoutes(app *fiber.App, db *gorm.DB) {
+func AuthRoutes(app *fiber.App, db *gorm.DB) {
 
 	//* Dengan constructor
 	authController := controller.NewAuthController(db)
