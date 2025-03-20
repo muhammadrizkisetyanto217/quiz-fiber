@@ -24,3 +24,28 @@ type SubcategoryModel struct {
 func (SubcategoryModel) TableName() string {
 	return "subcategories"
 }
+
+
+// Hook AfterSave untuk memperbarui total_subcategories di CategoryModel setelah insert/update
+func (s *SubcategoryModel) AfterSave(tx *gorm.DB) (err error) {
+	err = tx.Exec(`
+		UPDATE categories
+		SET total_subcategories = (
+			SELECT COUNT(*) FROM subcategories WHERE categories_id = ?
+		)
+		WHERE id = ?
+	`, s.CategoriesID, s.CategoriesID).Error
+	return
+}
+
+// Hook AfterDelete untuk memperbarui total_subcategories di CategoryModel setelah delete
+func (s *SubcategoryModel) AfterDelete(tx *gorm.DB) (err error) {
+	err = tx.Exec(`
+		UPDATE categories
+		SET total_subcategories = (
+			SELECT COUNT(*) FROM subcategories WHERE categories_id = ?
+		)
+		WHERE id = ?
+	`, s.CategoriesID, s.CategoriesID).Error
+	return
+}

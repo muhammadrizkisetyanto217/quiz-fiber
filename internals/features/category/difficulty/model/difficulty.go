@@ -20,3 +20,5 @@ type DifficultyModel struct {
 func (DifficultyModel) TableName() string {
 	return "difficulties"
 }
+
+

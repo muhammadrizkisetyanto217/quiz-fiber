@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type CategoryModel struct {
@@ -20,4 +22,28 @@ type CategoryModel struct {
 
 func (CategoryModel) TableName() string {
 	return "categories"
+}
+
+// Hook AfterSave untuk memperbarui total_categories di DifficultyModel setelah insert/update kategori
+func (c *CategoryModel) AfterSave(tx *gorm.DB) (err error) {
+	err = tx.Exec(`
+		UPDATE difficulties
+		SET total_categories = (
+			SELECT COUNT(*) FROM categories WHERE difficulty_id = ?
+		)
+		WHERE id = ?
+	`, c.DifficultyID, c.DifficultyID).Error
+	return
+}
+
+// Hook AfterDelete untuk memperbarui total_categories di DifficultyModel setelah delete kategori
+func (c *CategoryModel) AfterDelete(tx *gorm.DB) (err error) {
+	err = tx.Exec(`
+		UPDATE difficulties
+		SET total_categories = (
+			SELECT COUNT(*) FROM categories WHERE difficulty_id = ?
+		)
+		WHERE id = ?
+	`, c.DifficultyID, c.DifficultyID).Error
+	return
 }
