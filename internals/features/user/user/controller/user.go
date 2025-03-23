@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 
 	"quiz-fiber/internals/features/user/user/models"
@@ -28,73 +30,110 @@ func NewUserController(db *gorm.DB) *UserController {
 // 1. Saat Anda mempekerjakan kasir baru (UserController), Anda harus memberi mereka akses ke database toko (DB).
 // 2. NewUserController(db) adalah cara memberi kasir akses ke database saat mereka mulai bekerja.
 
-// Get all users
+// GET all users
 func (uc *UserController) GetUsers(c *fiber.Ctx) error {
 	var users []models.UserModel
 	if err := uc.DB.Find(&users).Error; err != nil {
+		log.Println("[ERROR] Failed to fetch users:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve users"})
 	}
-	return c.JSON(users)
+
+	log.Printf("[SUCCESS] Retrieved %d users\n", len(users))
+	return c.JSON(fiber.Map{
+		"message": "Users fetched successfully",
+		"total":   len(users),
+		"data":    users,
+	})
 }
 
-// Get user by ID
+// GET user by ID
 func (uc *UserController) GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var user models.UserModel
+
 	if err := uc.DB.First(&user, id).Error; err != nil {
+		log.Println("[ERROR] User not found:", err)
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
-	return c.JSON(user)
+
+	return c.JSON(fiber.Map{
+		"message": "User fetched successfully",
+		"data":    user,
+	})
 }
 
-// Create new user(s)
+// POST create new user(s)
 func (uc *UserController) CreateUser(c *fiber.Ctx) error {
 	var singleUser models.UserModel
 	var multipleUsers []models.UserModel
 
 	// Coba parse sebagai array terlebih dahulu
 	if err := c.BodyParser(&multipleUsers); err == nil && len(multipleUsers) > 0 {
-		// Jika berhasil diparse sebagai array, simpan banyak user
 		if err := uc.DB.Create(&multipleUsers).Error; err != nil {
+			log.Println("[ERROR] Failed to create multiple users:", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create multiple users"})
 		}
-		return c.Status(201).JSON(fiber.Map{"message": "Users created successfully", "users": multipleUsers})
+		return c.Status(201).JSON(fiber.Map{
+			"message": "Users created successfully",
+			"data":    multipleUsers,
+		})
 	}
 
-	// Jika gagal diparse sebagai array, coba parse sebagai satu user
+	// Jika gagal diparse sebagai array, parse sebagai satu user
 	if err := c.BodyParser(&singleUser); err != nil {
+		log.Println("[ERROR] Invalid input format:", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input format"})
 	}
 
-	// Simpan satu user
 	if err := uc.DB.Create(&singleUser).Error; err != nil {
+		log.Println("[ERROR] Failed to create user:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
-	return c.Status(201).JSON(fiber.Map{"message": "User created successfully", "user": singleUser})
+	return c.Status(201).JSON(fiber.Map{
+		"message": "User created successfully",
+		"data":    singleUser,
+	})
 }
 
-// Update user by ID
+// PUT update user by ID
 func (uc *UserController) UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var user models.UserModel
+
 	if err := uc.DB.First(&user, id).Error; err != nil {
+		log.Println("[ERROR] User not found:", err)
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
 	if err := c.BodyParser(&user); err != nil {
+		log.Println("[ERROR] Invalid input for update:", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	uc.DB.Save(&user)
-	return c.JSON(user)
+	if err := uc.DB.Save(&user).Error; err != nil {
+		log.Println("[ERROR] Failed to update user:", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update user"})
+	}
+
+	log.Printf("[SUCCESS] User updated: ID=%d\n", user.ID)
+	return c.JSON(fiber.Map{
+		"message": "User updated successfully",
+		"data":    user,
+	})
 }
 
-// Delete user by ID
+// DELETE user by ID
 func (uc *UserController) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
+
 	if err := uc.DB.Delete(&models.UserModel{}, id).Error; err != nil {
+		log.Println("[ERROR] Failed to delete user:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete user"})
 	}
-	return c.JSON(fiber.Map{"message": "User deleted successfully"})
+
+	log.Printf("[SUCCESS] User with ID %s deleted\n", id)
+	return c.JSON(fiber.Map{
+		"message": "User deleted successfully",
+	})
 }

@@ -7,6 +7,8 @@ import (
 	difficultyRoute "quiz-fiber/internals/features/category/difficulty/route"
 	categoryRoute "quiz-fiber/internals/features/category/category/route"
 	subcategoryRoute "quiz-fiber/internals/features/category/subcategory/route"
+	themesOrLevles "quiz-fiber/internals/features/category/themes_or_levels/route"
+	units "quiz-fiber/internals/features/category/units/route"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -26,5 +28,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	difficultyRoute.CategoryRoutes(app, db)
 	categoryRoute.CategoryRoutes(app, db)
 	subcategoryRoute.CategoryRoutes(app, db)
+	themesOrLevles.CategoryRoutes(app, db)
+	units.CategoryRoutes(app, db)
+
+
 
 }

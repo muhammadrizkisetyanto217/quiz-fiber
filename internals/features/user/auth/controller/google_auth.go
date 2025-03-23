@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,6 +42,33 @@ type GoogleUserInfo struct {
 	Picture       string `json:"picture"`
 }
 
+// TokenResponse holds the OAuth token response
+type TokenResponse struct {
+	AccessToken string `json:"access_token"`
+	IDToken     string `json:"id_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+}
+
+// UserResponse is the clean data structure sent to the frontend
+type UserResponse struct {
+	ID           uint       `json:"id"`
+	UserName     string     `json:"user_name"`
+	Email        string     `json:"email"`
+	GoogleID     *string    `json:"google_id,omitempty"`
+	Role         string     `json:"role"`
+	DonationName *string    `json:"donation_name,omitempty"`
+	OriginalName *string    `json:"original_name,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+// AuthResponse is the response sent to the frontend after successful authentication
+type AuthResponse struct {
+	Token string       `json:"token"`
+	User  UserResponse `json:"user"`
+}
+
 // GoogleAuthController handles Google authentication
 type GoogleAuthController struct {
 	DB           *gorm.DB
@@ -66,8 +95,14 @@ func NewGoogleAuthController(db *gorm.DB) *GoogleAuthController {
 func (gc *GoogleAuthController) GoogleLogin(c *fiber.Ctx) error {
 	log.Println("[INFO] Starting Google Login process")
 
-	// Generate random state
-	state := generateRandomString(32)
+	// Generate cryptographically secure random state
+	state, err := generateRandomString(32)
+	if err != nil {
+		log.Printf("[ERROR] Failed to generate random state: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Authentication initialization failed",
+		})
+	}
 
 	// Store state in session
 	c.Cookie(&fiber.Cookie{
@@ -75,6 +110,9 @@ func (gc *GoogleAuthController) GoogleLogin(c *fiber.Ctx) error {
 		Value:    state,
 		Expires:  time.Now().Add(10 * time.Minute),
 		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "lax",
+		Path:     "/",
 	})
 
 	// Build the authorization URL
@@ -94,7 +132,7 @@ func (gc *GoogleAuthController) GoogleLogin(c *fiber.Ctx) error {
 func (gc *GoogleAuthController) GoogleCallback(c *fiber.Ctx) error {
 	log.Println("[INFO] Handling Google callback")
 
-	// 1. Get and validate code and state
+	// 1. Validate the incoming request
 	code := c.Query("code")
 	state := c.Query("state")
 
@@ -120,9 +158,69 @@ func (gc *GoogleAuthController) GoogleCallback(c *fiber.Ctx) error {
 		Value:    "",
 		Expires:  time.Now().Add(-time.Hour),
 		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "lax",
+		Path:     "/",
 	})
 
 	// 2. Exchange code for token
+	tokenResponse, err := gc.exchangeCodeForToken(code)
+	if err != nil {
+		log.Printf("[ERROR] Token exchange failed: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to authenticate with Google",
+		})
+	}
+
+	// 3. Get user info
+	userInfo, err := gc.getUserInfo(tokenResponse.AccessToken)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get user info: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve user information",
+		})
+	}
+
+	// 4. Process user data and create/update user in database
+	user, err := gc.processUserData(userInfo)
+	if err != nil {
+		log.Printf("[ERROR] Failed to process user data: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to process user account",
+		})
+	}
+
+	// 5. Generate JWT token
+	token, err := gc.generateJWTToken(user)
+	if err != nil {
+		log.Printf("[ERROR] Failed to generate token: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to generate authentication token",
+		})
+	}
+
+	// 6. Prepare and return clean response
+	response := AuthResponse{
+		Token: token,
+		User: UserResponse{
+			ID:           user.ID,
+			UserName:     user.UserName,
+			Email:        user.Email,
+			GoogleID:     user.GoogleID,
+			Role:         user.Role,
+			DonationName: user.DonationName,
+			OriginalName: user.OriginalName,
+			CreatedAt:    user.CreatedAt,
+			UpdatedAt:    user.UpdatedAt,
+		},
+	}
+
+	log.Printf("[SUCCESS] Google login successful for user: ID=%d, Email=%s", user.ID, user.Email)
+	return c.JSON(response)
+}
+
+// exchangeCodeForToken exchanges the authorization code for an access token
+func (gc *GoogleAuthController) exchangeCodeForToken(code string) (*TokenResponse, error) {
 	tokenData := url.Values{}
 	tokenData.Set("code", code)
 	tokenData.Set("client_id", gc.GoogleConfig.ClientID)
@@ -130,145 +228,128 @@ func (gc *GoogleAuthController) GoogleCallback(c *fiber.Ctx) error {
 	tokenData.Set("redirect_uri", gc.GoogleConfig.RedirectURL)
 	tokenData.Set("grant_type", "authorization_code")
 
-	tokenReq, _ := http.NewRequest("POST", gc.GoogleConfig.TokenURL, 
-		io.NopCloser(strings.NewReader(tokenData.Encode())))
+	tokenReq, err := http.NewRequest("POST", gc.GoogleConfig.TokenURL, 
+		strings.NewReader(tokenData.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create token request: %w", err)
+	}
+	
 	tokenReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(tokenReq)
 	if err != nil {
-		log.Printf("[ERROR] Failed to exchange code for token: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to exchange code for token",
-		})
+		return nil, fmt.Errorf("failed to execute token request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// 3. Parse token response
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("token request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
 	tokenBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed to read token response: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to read token response",
-		})
+		return nil, fmt.Errorf("failed to read token response: %w", err)
 	}
 	
-	log.Printf("[DEBUG] Google token response: %s", string(tokenBody))
-
-	var tokenResp struct {
-		AccessToken string `json:"access_token"`
-		IDToken     string `json:"id_token"`
-	}
-
+	var tokenResp TokenResponse
 	if err := json.Unmarshal(tokenBody, &tokenResp); err != nil {
-		log.Printf("[ERROR] Failed to parse token response: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to parse token response",
-		})
+		return nil, fmt.Errorf("failed to parse token response: %w", err)
 	}
 
 	if tokenResp.AccessToken == "" {
-		log.Printf("[ERROR] No access token received from Google")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "No access token received from Google",
-		})
+		return nil, errors.New("no access token received from Google")
 	}
 
-	// 4. Get user info
-	userReq, _ := http.NewRequest("GET", gc.GoogleConfig.UserInfoURL, nil)
-	userReq.Header.Set("Authorization", "Bearer "+tokenResp.AccessToken)
+	return &tokenResp, nil
+}
 
+// getUserInfo fetches user information using the access token
+func (gc *GoogleAuthController) getUserInfo(accessToken string) (*GoogleUserInfo, error) {
+	userReq, err := http.NewRequest("GET", gc.GoogleConfig.UserInfoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user info request: %w", err)
+	}
+	
+	userReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
 	userResp, err := client.Do(userReq)
 	if err != nil {
-		log.Printf("[ERROR] Failed to get user info: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to get user info",
-		})
+		return nil, fmt.Errorf("failed to execute user info request: %w", err)
 	}
 	defer userResp.Body.Close()
 
-	// 5. Parse user info
-	userData, err := io.ReadAll(userResp.Body)
-	if err != nil {
-		log.Printf("[ERROR] Failed to read user info response: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to read user info response",
-		})
+	if userResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(userResp.Body)
+		return nil, fmt.Errorf("user info request failed with status %d: %s", userResp.StatusCode, string(body))
 	}
 
-	log.Printf("[DEBUG] Raw Google User Info Response: %s", string(userData))
+	userData, err := io.ReadAll(userResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read user info response: %w", err)
+	}
 
 	var userInfo GoogleUserInfo
 	if err := json.Unmarshal(userData, &userInfo); err != nil {
-		log.Printf("[ERROR] Failed to parse user info: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to parse user info",
-		})
+		return nil, fmt.Errorf("failed to parse user info: %w", err)
 	}
 
-	// Validasi data user dari Google
+	// Validate essential user info
 	if userInfo.ID == "" || userInfo.Email == "" {
-		log.Printf("[ERROR] Invalid user info from Google: ID=%s, Email=%s", userInfo.ID, userInfo.Email)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Invalid user info from Google",
-		})
+		return nil, errors.New("invalid user info from Google")
 	}
 
-	log.Printf("[INFO] User info from Google: ID=%s, Name=%s, Email=%s", userInfo.ID, userInfo.Name, userInfo.Email)
+	return &userInfo, nil
+}
 
-	// 6. Check if user exists and create/update as needed
-	// Kita akan gunakan transaction untuk memastikan integritas data
+// processUserData processes the user information and creates or updates the user in the database
+func (gc *GoogleAuthController) processUserData(userInfo *GoogleUserInfo) (*models.UserModel, error) {
 	var user models.UserModel
 	tx := gc.DB.Begin()
 	
 	if tx.Error != nil {
-		log.Printf("[ERROR] Failed to begin transaction: %v", tx.Error)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
-		})
+		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
 	}
 
-	// Coba cari user berdasarkan GoogleID
+	// Try to find user by Google ID
 	result := tx.Where("google_id = ?", userInfo.ID).First(&user)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		tx.Rollback()
-		log.Printf("[ERROR] Database error when searching by Google ID: %v", result.Error)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
-		})
+		return nil, fmt.Errorf("database error when searching by Google ID: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		// User tidak ditemukan berdasarkan Google ID, coba cari berdasarkan email
+		// User not found by Google ID, try to find by email
 		result = tx.Where("email = ?", userInfo.Email).First(&user)
 		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			tx.Rollback()
-			log.Printf("[ERROR] Database error when searching by email: %v", result.Error)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Database error",
-			})
+			return nil, fmt.Errorf("database error when searching by email: %w", result.Error)
 		}
 
 		if result.RowsAffected == 0 {
-			// User tidak ditemukan, buat user baru
+			// User not found, create new user
 			log.Printf("[INFO] Creating new user for Google ID: %s, Email: %s", userInfo.ID, userInfo.Email)
 
 			// Generate random password
-			randomPassword := generateRandomString(12)
+			randomPassword, err := generateRandomString(16)
+			if err != nil {
+				tx.Rollback()
+				return nil, fmt.Errorf("failed to generate random password: %w", err)
+			}
+			
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
 			if err != nil {
 				tx.Rollback()
-				log.Printf("[ERROR] Failed to hash password: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to secure password",
-				})
+				return nil, fmt.Errorf("failed to hash password: %w", err)
 			}
 
 			// Setup user data
 			googleID := userInfo.ID
 			userName := userInfo.Name
 			if userName == "" {
-				userName = userInfo.Email[:strings.Index(userInfo.Email, "@")]
+				userName = strings.Split(userInfo.Email, "@")[0]
 			}
 
 			newUser := models.UserModel{
@@ -282,135 +363,104 @@ func (gc *GoogleAuthController) GoogleCallback(c *fiber.Ctx) error {
 				OriginalName:     &userName,
 			}
 
-			// Debug info
-			userJSON, _ := json.Marshal(newUser)
-			log.Printf("[DEBUG] New user data: %s", string(userJSON))
-
-			// Buat user baru
+			// Create new user
 			if err := tx.Create(&newUser).Error; err != nil {
 				tx.Rollback()
-				log.Printf("[ERROR] Failed to create user: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to create user account",
-					"details": err.Error(),
-				})
+				return nil, fmt.Errorf("failed to create user: %w", err)
 			}
 
-			// Pastikan user sudah di-commit ke database
+			// Commit the transaction
 			if err := tx.Commit().Error; err != nil {
-				log.Printf("[ERROR] Failed to commit transaction: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to save user account",
-				})
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
 
-			// Ambil user yang baru dibuat untuk memastikan data lengkap
+			// Retrieve the newly created user to ensure complete data
 			if err := gc.DB.First(&user, newUser.ID).Error; err != nil {
-				log.Printf("[ERROR] Failed to retrieve newly created user: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to retrieve user account",
-				})
+				return nil, fmt.Errorf("failed to retrieve newly created user: %w", err)
 			}
 
 			log.Printf("[SUCCESS] New user created: ID=%d, Email=%s", user.ID, user.Email)
 		} else {
-			// User ditemukan berdasarkan email, update Google ID
+			// User found by email, update Google ID
 			log.Printf("[INFO] Updating existing user with Google ID: %s", userInfo.ID)
 			googleID := userInfo.ID
 			user.GoogleID = &googleID
 			
 			if err := tx.Save(&user).Error; err != nil {
 				tx.Rollback()
-				log.Printf("[ERROR] Failed to update user with Google ID: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to update user account",
-				})
+				return nil, fmt.Errorf("failed to update user with Google ID: %w", err)
 			}
 			
 			if err := tx.Commit().Error; err != nil {
-				log.Printf("[ERROR] Failed to commit transaction: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to save user account",
-				})
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
 			
 			log.Printf("[SUCCESS] Updated user with Google ID: ID=%d, Email=%s", user.ID, user.Email)
 		}
 	} else {
-		// User ditemukan berdasarkan Google ID
+		// User found by Google ID
 		log.Printf("[INFO] User found by Google ID: %s", userInfo.ID)
 		
-		// Update user info jika diperlukan
+		// Update user info if needed
+		needsUpdate := false
 		if user.Email != userInfo.Email {
 			user.Email = userInfo.Email
-			
+			needsUpdate = true
+		}
+		
+		// Update user name if it's empty
+		if user.UserName == "" && userInfo.Name != "" {
+			user.UserName = userInfo.Name
+			needsUpdate = true
+		}
+		
+		if needsUpdate {
 			if err := tx.Save(&user).Error; err != nil {
 				tx.Rollback()
-				log.Printf("[ERROR] Failed to update user email: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to update user account",
-				})
+				return nil, fmt.Errorf("failed to update user: %w", err)
 			}
 			
 			if err := tx.Commit().Error; err != nil {
-				log.Printf("[ERROR] Failed to commit transaction: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to save user account",
-				})
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
 			
-			log.Printf("[SUCCESS] Updated user email: ID=%d, Email=%s", user.ID, user.Email)
+			log.Printf("[SUCCESS] Updated user: ID=%d, Email=%s", user.ID, user.Email)
 		} else {
-			// Tidak ada perubahan, commit transaction
+			// No changes, commit transaction
 			if err := tx.Commit().Error; err != nil {
-				log.Printf("[ERROR] Failed to commit transaction: %v", err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Database error",
-				})
+				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
 		}
 	}
 
-	// Generate JWT token
+	return &user, nil
+}
+
+// generateJWTToken generates a JWT token for the user
+func (gc *GoogleAuthController) generateJWTToken(user *models.UserModel) (string, error) {
 	expirationTime := time.Now().Add(time.Hour * 96) // 4 days
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  user.ID,
-		"exp": expirationTime.Unix(),
+		"id":    user.ID,
+		"email": user.Email,
+		"role":  user.Role,
+		"exp":   expirationTime.Unix(),
+		"iat":   time.Now().Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(configs.GetEnv("JWT_SECRET")))
 	if err != nil {
-		log.Printf("[ERROR] Failed to generate token: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to generate token",
-		})
+		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// Return token and user info
-	log.Printf("[SUCCESS] Google login successful for user: ID=%d, Email=%s", user.ID, user.Email)
-	return c.JSON(fiber.Map{
-		"token": tokenString,
-		"user": fiber.Map{
-			"id":            user.ID,
-			"user_name":     user.UserName,
-			"email":         user.Email,
-			"google_id":     user.GoogleID,
-			"role":          user.Role,
-			"donation_name": user.DonationName,
-			"original_name": user.OriginalName,
-			"created_at":    user.CreatedAt,
-			"updated_at":    user.UpdatedAt,
-		},
-	})
+	return tokenString, nil
 }
 
-// generateRandomString generates a random string of the specified length
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
-		time.Sleep(1 * time.Nanosecond) // To ensure uniqueness
+// generateRandomString generates a cryptographically secure random string
+func generateRandomString(length int) (string, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
 	}
-	return string(result)
+	return base64.URLEncoding.EncodeToString(b)[:length], nil
 }

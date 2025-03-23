@@ -1,10 +1,8 @@
 package controller
 
 import (
-
 	"errors"
 	"log"
-	"os"
 
 	// "os"
 	"strings"
@@ -14,16 +12,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 
-	
 	"gorm.io/gorm"
 
 	"quiz-fiber/internals/configs"
-	modelUser "quiz-fiber/internals/features/user/user/models"
 	modelAuth "quiz-fiber/internals/features/user/auth/models"
+	modelUser "quiz-fiber/internals/features/user/user/models"
 )
-
-// 🔑 Load Secret Key dari Environment
-var SecretKey = configs.GetEnv("JWT_SECRET")
 
 type AuthController struct {
 	DB *gorm.DB
@@ -33,30 +27,22 @@ func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{DB: db}
 }
 
-// 🔥 REGISTER USER
 func (ac *AuthController) Register(c *fiber.Ctx) error {
 	var input modelUser.UserModel
-
 	if err := c.BodyParser(&input); err != nil {
 		log.Printf("[ERROR] Failed to parse request body: %v", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request format"})
 	}
-
-	// Validasi input
 	if err := input.Validate(); err != nil {
 		log.Printf("[ERROR] Validation failed: %v", err)
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	// Hash password
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("[ERROR] Failed to hash password: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to secure password"})
 	}
 	input.Password = string(passwordHash)
-
-	// Simpan user ke database
 	if err := ac.DB.Create(&input).Error; err != nil {
 		log.Printf("[ERROR] Failed to save user to database: %v", err)
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
@@ -64,54 +50,39 @@ func (ac *AuthController) Register(c *fiber.Ctx) error {
 		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to register user"})
 	}
-
 	log.Printf("[SUCCESS] User registered: ID=%d, Email=%s", input.ID, input.Email)
 	return c.Status(201).JSON(fiber.Map{"message": "User registered successfully"})
 }
 
-// 🔥 LOGIN USER
-// 🔥 LOGIN USER
 func (ac *AuthController) Login(c *fiber.Ctx) error {
 	var input struct {
-		Identifier string `json:"identifier"` // Bisa Email atau Nama
+		Identifier string `json:"identifier"`
 		Password   string `json:"password"`
 	}
-
 	if err := c.BodyParser(&input); err != nil {
 		log.Printf("[ERROR] Failed to parse request body: %v", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
-
-	// Cek user berdasarkan Email atau Nama
 	var user modelUser.UserModel
 	if err := ac.DB.Where("email = ? OR user_name = ?", input.Identifier, input.Identifier).First(&user).Error; err != nil {
 		log.Printf("[ERROR] User not found: Identifier=%s", input.Identifier)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid email, username, or password"})
 	}
-
-	// Cek password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		log.Printf("[ERROR] Password incorrect for user: %s", user.Email)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid email, username, or password"})
 	}
-
-	// Generate JWT token
-	expirationTime := time.Now().Add(time.Hour * 96) // 4 hari
+	expirationTime := time.Now().Add(time.Hour * 96)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  user.ID,
 		"exp": expirationTime.Unix(),
 	})
-
-	tokenString, err := token.SignedString([]byte(SecretKey))
+	tokenString, err := token.SignedString([]byte(configs.JWTSecret))
 	if err != nil {
 		log.Printf("[ERROR] Failed to generate token for user: %s", user.Email)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
-
-	// 🔥 Hapus password sebelum mengembalikan data
 	user.Password = ""
-
-	// 🔥 Format response JSON
 	log.Printf("[SUCCESS] User logged in: ID=%d, Email=%s", user.ID, user.Email)
 	return c.JSON(fiber.Map{
 		"token": tokenString,
@@ -287,25 +258,17 @@ func (ac *AuthController) ResetPassword(c *fiber.Ctx) error {
 func AuthMiddleware(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
-
-		// Debugging: Cek apakah Authorization Header diterima
 		log.Println("[DEBUG] Authorization Header:", authHeader)
-
 		if authHeader == "" {
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - No token provided"})
 		}
-
 		tokenParts := strings.Split(authHeader, " ")
 		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Invalid token format"})
 		}
-
 		tokenString := tokenParts[1]
-
-		// 🔍 Cek apakah token sudah di blacklist
 		var existingToken modelAuth.TokenBlacklist
 		err := db.Where("token = ?", tokenString).First(&existingToken).Error
-
 		if err == nil {
 			log.Println("[WARNING] Token ditemukan di blacklist, akses ditolak.")
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Token is blacklisted"})
@@ -313,63 +276,43 @@ func AuthMiddleware(db *gorm.DB) fiber.Handler {
 			log.Println("[ERROR] Database error saat cek token blacklist:", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Internal Server Error"})
 		}
-
-		// ✅ Ambil Secret Key dari Environment Variables
-		secretKey := os.Getenv("JWT_SECRET")
+		secretKey := configs.JWTSecret
 		if secretKey == "" {
 			log.Println("[ERROR] JWT_SECRET tidak ditemukan di environment")
 			return c.Status(500).JSON(fiber.Map{"error": "Internal Server Error - Missing JWT Secret"})
 		}
-
-		// 🔍 Validasi JWT token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secretKey), nil
 		})
-
 		if err != nil || !token.Valid {
 			log.Println("[ERROR] Token tidak valid:", err)
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Invalid token"})
 		}
-
-		// 🔍 Cek apakah token sudah expired
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			log.Println("[ERROR] Token claims tidak valid")
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Invalid token claims"})
 		}
-
 		exp, exists := claims["exp"].(float64)
 		if !exists {
 			log.Println("[ERROR] Token tidak memiliki exp")
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Token has no expiration"})
 		}
-
-		// ✅ Tambahkan debugging untuk melihat isi token claims
 		log.Println("[DEBUG] Token Claims:", claims)
-
-		// Ambil `id` dari token (biasanya disimpan sebagai float64)
 		userID, exists := claims["id"].(float64)
 		if !exists {
 			log.Println("[ERROR] User ID not found in token claims")
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - No user ID in token"})
 		}
-
-		// Simpan `user_id` ke context
 		c.Locals("user_id", uint(userID))
 		log.Println("[SUCCESS] User ID stored in context:", uint(userID))
-
-		// 🔍 Log waktu expired token untuk debugging
 		expTime := time.Unix(int64(exp), 0)
 		log.Printf("[INFO] Token Expiration Time: %v", expTime)
-
 		if time.Now().Unix() > int64(exp) {
 			log.Println("[ERROR] Token sudah expired")
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Token expired"})
 		}
-
-		// 🔥 Lanjut ke route berikutnya jika token valid
 		log.Println("[SUCCESS] Token valid, lanjutkan request")
 		return c.Next()
 	}
 }
-

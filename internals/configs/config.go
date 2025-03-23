@@ -34,9 +34,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// JWTSecret akan diisi saat LoadEnv dipanggil
+var JWTSecret string
+
 // LoadEnv memuat file .env jika berjalan secara lokal
 func LoadEnv() {
-	if os.Getenv("RAILWAY_ENVIRONMENT") == "" { // Cek apakah berjalan di Railway
+	if os.Getenv("RAILWAY_ENVIRONMENT") == "" { // Cek apakah berjalan di lokal
 		err := godotenv.Load()
 		if err != nil {
 			log.Println("⚠️ Tidak menemukan .env file, menggunakan environment variable dari sistem")
@@ -45,6 +48,16 @@ func LoadEnv() {
 		}
 	} else {
 		log.Println("🚀 Running in Railway, menggunakan environment variables dari sistem")
+	}
+
+	// 🔐 Ambil JWT_SECRET setelah dotenv diload
+	JWTSecret = GetEnv("JWT_SECRET")
+
+	// Debug print untuk memastikan terload
+	if JWTSecret == "" {
+		log.Println("❌ JWT_SECRET belum diset! Harap cek .env atau Environment Variable di Railway.")
+	} else {
+		log.Println("✅ JWT_SECRET berhasil dimuat.")
 	}
 }
 

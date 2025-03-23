@@ -1,4 +1,4 @@
-package category
+package model
 
 import (
 	"encoding/json"

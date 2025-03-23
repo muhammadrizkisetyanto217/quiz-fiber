@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"quiz-fiber/internals/features/category/category/model"
+
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -25,7 +26,11 @@ func (cc *CategoryController) GetCategories(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch categories"})
 	}
 	log.Printf("[SUCCESS] Retrieved %d categories\n", len(categories))
-	return c.JSON(categories)
+	return c.JSON(fiber.Map{
+		"message": "All categories fetched successfully",
+		"total":   len(categories),
+		"data":    categories,
+	})
 }
 
 // Get single category
@@ -39,7 +44,10 @@ func (cc *CategoryController) GetCategory(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Category not found"})
 	}
 	log.Printf("[SUCCESS] Retrieved category: ID=%s, Name=%s\n", id, category.Name)
-	return c.JSON(category)
+	return c.JSON(fiber.Map{
+		"message": "Category fetched successfully",
+		"data":    category,
+	})
 }
 
 // Get categories by difficulty_id
@@ -53,25 +61,51 @@ func (cc *CategoryController) GetCategoriesByDifficulty(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch categories"})
 	}
 	log.Printf("[SUCCESS] Retrieved %d categories for difficulty ID %s\n", len(categories), difficultyID)
-	return c.JSON(categories)
+	return c.JSON(fiber.Map{
+		"message": "Categories fetched successfully by difficulty",
+		"total":   len(categories),
+		"data":    categories,
+	})
 }
 
-// Create category
+// CreateCategory menangani permintaan untuk membuat satu atau banyak kategori
 func (cc *CategoryController) CreateCategory(c *fiber.Ctx) error {
 	log.Println("[INFO] Received request to create category")
 
-	var category model.CategoryModel
-	if err := c.BodyParser(&category); err != nil {
-		log.Printf("[ERROR] Invalid input: %v\n", err)
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	var singleCategory model.CategoryModel       // Untuk input tunggal
+	var multipleCategories []model.CategoryModel // Untuk input array / banyak data
+
+	// 💡 Coba parsing body request sebagai array terlebih dahulu
+	if err := c.BodyParser(&multipleCategories); err == nil && len(multipleCategories) > 0 {
+		// ✅ Jika berhasil dan array tidak kosong → buat banyak kategori sekaligus
+		if err := cc.DB.Create(&multipleCategories).Error; err != nil {
+			log.Printf("[ERROR] Failed to create multiple categories: %v\n", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create multiple categories"})
+		}
+		log.Printf("[SUCCESS] %d categories created\n", len(multipleCategories))
+		return c.Status(201).JSON(fiber.Map{
+			"message": "Multiple categories created successfully",
+			"data":    multipleCategories,
+		})
 	}
 
-	if err := cc.DB.Create(&category).Error; err != nil {
-		log.Printf("[ERROR] Failed to create category: %v\n", err)
+	// 💡 Jika gagal parsing sebagai array, coba parsing sebagai satu objek (single category)
+	if err := c.BodyParser(&singleCategory); err != nil {
+		log.Printf("[ERROR] Invalid input for single category: %v\n", err)
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input format"})
+	}
+
+	// ✅ Simpan satu kategori
+	if err := cc.DB.Create(&singleCategory).Error; err != nil {
+		log.Printf("[ERROR] Failed to create single category: %v\n", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create category"})
 	}
-	log.Printf("[SUCCESS] Category created: ID=%d, Name=%s\n", category.ID, category.Name)
-	return c.Status(201).JSON(category)
+
+	log.Printf("[SUCCESS] Category created: ID=%d, Name=%s\n", singleCategory.ID, singleCategory.Name)
+	return c.Status(201).JSON(fiber.Map{
+		"message": "Category created successfully",
+		"data":    singleCategory,
+	})
 }
 
 // Update category
@@ -95,7 +129,10 @@ func (cc *CategoryController) UpdateCategory(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update category"})
 	}
 	log.Printf("[SUCCESS] Category updated: ID=%s, Name=%s\n", id, category.Name)
-	return c.JSON(category)
+	return c.JSON(fiber.Map{
+		"message": "Category updated successfully",
+		"data":    category,
+	})
 }
 
 // Delete category
@@ -108,5 +145,7 @@ func (cc *CategoryController) DeleteCategory(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete category"})
 	}
 	log.Printf("[SUCCESS] Category with ID %s deleted successfully\n", id)
-	return c.JSON(fiber.Map{"message": "Category deleted successfully"})
+	return c.JSON(fiber.Map{
+		"message": "Category deleted successfully",
+	})
 }

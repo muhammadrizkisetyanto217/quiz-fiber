@@ -1,8 +1,10 @@
 package category
 
 import (
+	"fmt"
 	"log"
 	"quiz-fiber/internals/features/category/difficulty/model"
+
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -26,7 +28,11 @@ func (dc *DifficultyController) GetDifficulties(c *fiber.Ctx) error {
 	}
 
 	log.Printf("[SUCCESS] Retrieved %d difficulties\n", len(difficulties))
-	return c.JSON(difficulties)
+	return c.JSON(fiber.Map{
+		"message": "All difficulties fetched successfully",
+		"total":   len(difficulties),
+		"data":    difficulties,
+	})
 }
 
 // Get difficulty by ID
@@ -41,27 +47,71 @@ func (dc *DifficultyController) GetDifficulty(c *fiber.Ctx) error {
 	}
 
 	log.Printf("[SUCCESS] Retrieved difficulty: ID=%d, Name=%s\n", difficulty.ID, difficulty.Name)
-	return c.JSON(difficulty)
+	return c.JSON(fiber.Map{
+		"message": "Difficulty fetched successfully",
+		"data":    difficulty,
+	})
 }
 
-// Create difficulty
+// CreateDifficulty menangani request untuk membuat satu atau banyak data difficulty
+// CreateDifficulty menangani input satu atau banyak difficulty
 func (dc *DifficultyController) CreateDifficulty(c *fiber.Ctx) error {
 	log.Println("[INFO] Received request to create difficulty")
-	difficulty := new(model.DifficultyModel)
-	if err := c.BodyParser(difficulty); err != nil {
-		log.Printf("[ERROR] Failed to parse JSON: %v\n", err)
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+
+	var single model.DifficultyModel
+	var multiple []model.DifficultyModel
+
+	// 🧠 Coba parse sebagai array terlebih dahulu
+	if err := c.BodyParser(&multiple); err == nil && len(multiple) > 0 {
+		log.Printf("[DEBUG] Parsed %d difficulties as array\n", len(multiple))
+
+		// ✅ Validasi setiap data di array
+		for i, d := range multiple {
+			if d.Name == "" {
+				return c.Status(400).JSON(fiber.Map{
+					"error": "Name is required in each difficulty",
+					"index": i,
+				})
+			}
+		}
+
+		// ✅ Simpan jika semua valid
+		if err := dc.DB.Create(&multiple).Error; err != nil {
+			log.Printf("[ERROR] Failed to insert multiple difficulties: %v\n", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create difficulties"})
+		}
+
+		log.Printf("[SUCCESS] %d difficulties created successfully\n", len(multiple))
+		return c.Status(201).JSON(fiber.Map{
+			"message": "Multiple difficulties created successfully",
+			"data":    multiple,
+		})
 	}
 
-	log.Printf("[DEBUG] Parsed difficulty: %+v\n", difficulty)
-
-	if err := dc.DB.Create(difficulty).Error; err != nil {
-		log.Printf("[ERROR] Failed to insert difficulty: %v\n", err)
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	// 🔁 Jika bukan array, parse sebagai satu objek
+	if err := c.BodyParser(&single); err != nil {
+		log.Printf("[ERROR] Failed to parse single difficulty input: %v\n", err)
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	log.Printf("[SUCCESS] Difficulty created: ID=%d, Name=%s\n", difficulty.ID, difficulty.Name)
-	return c.Status(201).JSON(difficulty)
+	log.Printf("[DEBUG] Parsed single difficulty: %+v\n", single)
+
+	// ✅ Validasi name
+	if single.Name == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Name is required"})
+	}
+
+	// ✅ Simpan ke database
+	if err := dc.DB.Create(&single).Error; err != nil {
+		log.Printf("[ERROR] Failed to insert single difficulty: %v\n", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create difficulty"})
+	}
+
+	log.Printf("[SUCCESS] Difficulty created: ID=%d, Name=%s\n", single.ID, single.Name)
+	return c.Status(201).JSON(fiber.Map{
+		"message": "Difficulty created successfully",
+		"data":    single,
+	})
 }
 
 // Update difficulty
@@ -87,7 +137,10 @@ func (dc *DifficultyController) UpdateDifficulty(c *fiber.Ctx) error {
 	}
 
 	log.Printf("[SUCCESS] Difficulty with ID %s updated successfully\n", id)
-	return c.JSON(difficulty)
+	return c.JSON(fiber.Map{
+		"message": "Difficulty updated successfully",
+		"data":    difficulty,
+	})
 }
 
 // Delete difficulty
@@ -101,5 +154,7 @@ func (dc *DifficultyController) DeleteDifficulty(c *fiber.Ctx) error {
 	}
 
 	log.Printf("[SUCCESS] Difficulty with ID %s deleted successfully\n", id)
-	return c.JSON(fiber.Map{"message": "Difficulty deleted"})
+	return c.JSON(fiber.Map{
+		"message": fmt.Sprintf("Difficulty with ID %s deleted successfully", id),
+	})
 }

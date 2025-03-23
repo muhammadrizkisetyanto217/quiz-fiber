@@ -1,4 +1,4 @@
-package category
+package route
 
 import (
 	difficultyController "quiz-fiber/internals/features/category/difficulty/controller"
