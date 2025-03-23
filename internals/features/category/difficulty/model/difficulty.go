@@ -3,22 +3,22 @@ package model
 import (
 	"time"
 
+	"gorm.io/datatypes"
 )
 
 type DifficultyModel struct {
-	ID                uint      `gorm:"primaryKey" json:"id"`
-	Name              string    `gorm:"size:255;not null" json:"name"`
-	DescriptionShort  string    `gorm:"size:100" json:"description_short"`
-	DescriptionLong   string    `gorm:"size:2000" json:"description_long"`
-	TotalCategories   int       `json:"total_categories"`
-	Status            string    `gorm:"size:10;default:'pending';check:status IN ('active', 'pending', 'archived')" json:"status"`
-	CreatedAt         time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt         time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID               uint           `gorm:"primaryKey" json:"id"`
+	Name             string         `gorm:"size:255;not null" json:"name"`
+	Status           string         `gorm:"size:10;default:'pending';check:status IN ('active', 'pending', 'archived')" json:"status"`
+	DescriptionShort string         `gorm:"size:200" json:"description_short"`
+	DescriptionLong  string         `gorm:"size:3000" json:"description_long"`
+	TotalCategories  int            `json:"total_categories"`
+	ImageURL         string         `gorm:"size:100" json:"image_url"`
+	UpdateNews       datatypes.JSON `json:"update_news"` // pakai JSONB di PostgreSQL
+	CreatedAt        time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt        time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 }
-
 
 func (DifficultyModel) TableName() string {
 	return "difficulties"
 }
-
-
