@@ -37,6 +37,18 @@ CREATE TABLE IF NOT EXISTS categories (
     difficulty_id INT REFERENCES difficulties(id)
 );
 
+CREATE TABLE IF NOT EXISTS categories_news (
+    id SERIAL PRIMARY KEY,
+    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+
+
 
 CREATE TABLE IF NOT EXISTS subcategories (
     id SERIAL PRIMARY KEY,
@@ -50,6 +62,17 @@ CREATE TABLE IF NOT EXISTS subcategories (
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
     categories_id INT REFERENCES categories(id)
+);
+
+CREATE TABLE IF NOT EXISTS subcategories_news (
+    id SERIAL PRIMARY KEY,
+    subcategory_id INTEGER NOT NULL REFERENCES subcategories(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 
@@ -66,6 +89,17 @@ CREATE TABLE IF NOT EXISTS themes_or_levels (
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
     subcategories_id INT REFERENCES subcategories(id)
+);
+
+CREATE TABLE IF NOT EXISTS themes_or_levels_news (
+    id SERIAL PRIMARY KEY,
+    themes_or_level_id INTEGER NOT NULL REFERENCES themes_or_levels(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 
@@ -85,6 +119,16 @@ CREATE TABLE IF NOT EXISTS units (
 );
 
 
+CREATE TABLE IF NOT EXISTS units_news (
+    id SERIAL PRIMARY KEY,
+    unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
+);
 
 
 

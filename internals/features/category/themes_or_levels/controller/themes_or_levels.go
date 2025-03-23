@@ -18,7 +18,7 @@ func NewThemeOrLevelController(db *gorm.DB) *ThemeOrLevelController {
 
 func (tc *ThemeOrLevelController) GetThemeOrLevels(c *fiber.Ctx) error {
 	log.Println("[INFO] Fetching all themes or levels")
-	var themesOrLevels []model.ThemesOrLevelModel
+	var themesOrLevels []model.ThemesOrLevelsModel
 
 	if err := tc.DB.Find(&themesOrLevels).Error; err != nil {
 		log.Println("[ERROR] Failed to fetch themes or levels:", err)
@@ -37,7 +37,7 @@ func (tc *ThemeOrLevelController) GetThemeOrLevelById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	log.Println("[INFO] Fetching theme or level with ID:", id)
 
-	var themeOrLevel model.ThemesOrLevelModel
+	var themeOrLevel model.ThemesOrLevelsModel
 	if err := tc.DB.First(&themeOrLevel, id).Error; err != nil {
 		log.Println("[ERROR] Theme or level not found:", err)
 		return c.Status(404).JSON(fiber.Map{"error": "Theme or level not found"})
@@ -54,7 +54,7 @@ func (tc *ThemeOrLevelController) GetThemesOrLevelsBySubcategory(c *fiber.Ctx) e
 	subcategoryID := c.Params("subcategory_id")
 	log.Printf("[INFO] Fetching themes or levels for subcategory ID: %s\n", subcategoryID)
 
-	var themesOrLevels []model.ThemesOrLevelModel
+	var themesOrLevels []model.ThemesOrLevelsModel
 	if err := tc.DB.Where("subcategories_id = ?", subcategoryID).Find(&themesOrLevels).Error; err != nil {
 		log.Printf("[ERROR] Failed to fetch themes or levels for subcategory ID %s: %v\n", subcategoryID, err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch themes or levels"})
@@ -71,8 +71,8 @@ func (tc *ThemeOrLevelController) GetThemesOrLevelsBySubcategory(c *fiber.Ctx) e
 func (tc *ThemeOrLevelController) CreateThemeOrLevel(c *fiber.Ctx) error {
 	log.Println("[INFO] Received request to create theme or level")
 
-	var single model.ThemesOrLevelModel
-	var multiple []model.ThemesOrLevelModel
+	var single model.ThemesOrLevelsModel
+	var multiple []model.ThemesOrLevelsModel
 
 	// 🧠 Coba parse sebagai array terlebih dahulu
 	if err := c.BodyParser(&multiple); err == nil && len(multiple) > 0 {
@@ -158,7 +158,7 @@ func (tc *ThemeOrLevelController) UpdateThemeOrLevel(c *fiber.Ctx) error {
 	id := c.Params("id")
 	log.Println("[INFO] Updating theme or level with ID:", id)
 
-	var themeOrLevel model.ThemesOrLevelModel
+	var themeOrLevel model.ThemesOrLevelsModel
 	if err := tc.DB.First(&themeOrLevel, id).Error; err != nil {
 		log.Println("[ERROR] Theme or level not found:", err)
 		return c.Status(404).JSON(fiber.Map{"error": "Theme or level not found"})
@@ -185,7 +185,7 @@ func (tc *ThemeOrLevelController) DeleteThemeOrLevel(c *fiber.Ctx) error {
 	id := c.Params("id")
 	log.Println("[INFO] Deleting theme or level with ID:", id)
 
-	if err := tc.DB.Delete(&model.ThemesOrLevelModel{}, id).Error; err != nil {
+	if err := tc.DB.Delete(&model.ThemesOrLevelsModel{}, id).Error; err != nil {
 		log.Println("[ERROR] Failed to delete theme or level:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete theme or level"})
 	}

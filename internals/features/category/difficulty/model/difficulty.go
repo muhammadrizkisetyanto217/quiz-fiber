@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type DifficultyModel struct {
@@ -17,6 +18,8 @@ type DifficultyModel struct {
 	UpdateNews       datatypes.JSON `json:"update_news"` // pakai JSONB di PostgreSQL
 	CreatedAt        time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt        time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+	
 }
 
 func (DifficultyModel) TableName() string {

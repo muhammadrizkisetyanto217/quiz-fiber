@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"encoding/json"
 	"log"
 
 	"quiz-fiber/internals/features/category/category/model"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -72,12 +74,10 @@ func (cc *CategoryController) GetCategoriesByDifficulty(c *fiber.Ctx) error {
 func (cc *CategoryController) CreateCategory(c *fiber.Ctx) error {
 	log.Println("[INFO] Received request to create category")
 
-	var singleCategory model.CategoryModel       // Untuk input tunggal
-	var multipleCategories []model.CategoryModel // Untuk input array / banyak data
+	var singleCategory model.CategoryModel
+	var multipleCategories []model.CategoryModel
 
-	// 💡 Coba parsing body request sebagai array terlebih dahulu
 	if err := c.BodyParser(&multipleCategories); err == nil && len(multipleCategories) > 0 {
-		// ✅ Jika berhasil dan array tidak kosong → buat banyak kategori sekaligus
 		if err := cc.DB.Create(&multipleCategories).Error; err != nil {
 			log.Printf("[ERROR] Failed to create multiple categories: %v\n", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create multiple categories"})
@@ -89,13 +89,24 @@ func (cc *CategoryController) CreateCategory(c *fiber.Ctx) error {
 		})
 	}
 
-	// 💡 Jika gagal parsing sebagai array, coba parsing sebagai satu objek (single category)
 	if err := c.BodyParser(&singleCategory); err != nil {
 		log.Printf("[ERROR] Invalid input for single category: %v\n", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input format"})
 	}
 
-	// ✅ Simpan satu kategori
+	// Handle update_news jika ada
+	if c.Body() != nil {
+		var raw map[string]interface{}
+		if err := json.Unmarshal(c.Body(), &raw); err == nil {
+			if un, ok := raw["update_news"]; ok {
+				jsonData, err := json.Marshal(un)
+				if err == nil {
+					singleCategory.UpdateNews = datatypes.JSON(jsonData)
+				}
+			}
+		}
+	}
+
 	if err := cc.DB.Create(&singleCategory).Error; err != nil {
 		log.Printf("[ERROR] Failed to create single category: %v\n", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create category"})
@@ -119,12 +130,20 @@ func (cc *CategoryController) UpdateCategory(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Category not found"})
 	}
 
-	if err := c.BodyParser(&category); err != nil {
+	var input map[string]interface{}
+	if err := c.BodyParser(&input); err != nil {
 		log.Printf("[ERROR] Invalid input: %v\n", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	if err := cc.DB.Save(&category).Error; err != nil {
+	if un, ok := input["update_news"]; ok {
+		jsonData, err := json.Marshal(un)
+		if err == nil {
+			input["update_news"] = datatypes.JSON(jsonData)
+		}
+	}
+
+	if err := cc.DB.Model(&category).Updates(input).Error; err != nil {
 		log.Printf("[ERROR] Failed to update category: %v\n", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update category"})
 	}
@@ -146,6 +165,5 @@ func (cc *CategoryController) DeleteCategory(c *fiber.Ctx) error {
 	}
 	log.Printf("[SUCCESS] Category with ID %s deleted successfully\n", id)
 	return c.JSON(fiber.Map{
-		"message": "Category deleted successfully",
-	})
+		"message": "Category deleted successfully"})
 }
