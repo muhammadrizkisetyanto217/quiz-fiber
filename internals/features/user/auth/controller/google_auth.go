@@ -15,6 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
@@ -52,15 +53,15 @@ type TokenResponse struct {
 
 // UserResponse is the clean data structure sent to the frontend
 type UserResponse struct {
-	ID           uint       `json:"id"`
-	UserName     string     `json:"user_name"`
-	Email        string     `json:"email"`
-	GoogleID     *string    `json:"google_id,omitempty"`
-	Role         string     `json:"role"`
-	DonationName *string    `json:"donation_name,omitempty"`
-	OriginalName *string    `json:"original_name,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID           uuid.UUID `json:"id"` 
+	UserName     string    `json:"user_name"`
+	Email        string    `json:"email"`
+	GoogleID     *string   `json:"google_id,omitempty"`
+	Role         string    `json:"role"`
+	DonationName *string   `json:"donation_name,omitempty"`
+	OriginalName *string   `json:"original_name,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // AuthResponse is the response sent to the frontend after successful authentication
@@ -142,7 +143,7 @@ func (gc *GoogleAuthController) GoogleCallback(c *fiber.Ctx) error {
 			"error": "No code received from Google",
 		})
 	}
-	
+
 	// Verify state
 	storedState := c.Cookies("google_oauth_state")
 	if storedState == "" || storedState != state {
@@ -228,14 +229,14 @@ func (gc *GoogleAuthController) exchangeCodeForToken(code string) (*TokenRespons
 	tokenData.Set("redirect_uri", gc.GoogleConfig.RedirectURL)
 	tokenData.Set("grant_type", "authorization_code")
 
-	tokenReq, err := http.NewRequest("POST", gc.GoogleConfig.TokenURL, 
+	tokenReq, err := http.NewRequest("POST", gc.GoogleConfig.TokenURL,
 		strings.NewReader(tokenData.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token request: %w", err)
 	}
-	
+
 	tokenReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(tokenReq)
 	if err != nil {
@@ -252,7 +253,7 @@ func (gc *GoogleAuthController) exchangeCodeForToken(code string) (*TokenRespons
 	if err != nil {
 		return nil, fmt.Errorf("failed to read token response: %w", err)
 	}
-	
+
 	var tokenResp TokenResponse
 	if err := json.Unmarshal(tokenBody, &tokenResp); err != nil {
 		return nil, fmt.Errorf("failed to parse token response: %w", err)
@@ -271,7 +272,7 @@ func (gc *GoogleAuthController) getUserInfo(accessToken string) (*GoogleUserInfo
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user info request: %w", err)
 	}
-	
+
 	userReq.Header.Set("Authorization", "Bearer "+accessToken)
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -308,7 +309,7 @@ func (gc *GoogleAuthController) getUserInfo(accessToken string) (*GoogleUserInfo
 func (gc *GoogleAuthController) processUserData(userInfo *GoogleUserInfo) (*models.UserModel, error) {
 	var user models.UserModel
 	tx := gc.DB.Begin()
-	
+
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
 	}
@@ -338,7 +339,7 @@ func (gc *GoogleAuthController) processUserData(userInfo *GoogleUserInfo) (*mode
 				tx.Rollback()
 				return nil, fmt.Errorf("failed to generate random password: %w", err)
 			}
-			
+
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
 			if err != nil {
 				tx.Rollback()
@@ -385,45 +386,45 @@ func (gc *GoogleAuthController) processUserData(userInfo *GoogleUserInfo) (*mode
 			log.Printf("[INFO] Updating existing user with Google ID: %s", userInfo.ID)
 			googleID := userInfo.ID
 			user.GoogleID = &googleID
-			
+
 			if err := tx.Save(&user).Error; err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("failed to update user with Google ID: %w", err)
 			}
-			
+
 			if err := tx.Commit().Error; err != nil {
 				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
-			
+
 			log.Printf("[SUCCESS] Updated user with Google ID: ID=%d, Email=%s", user.ID, user.Email)
 		}
 	} else {
 		// User found by Google ID
 		log.Printf("[INFO] User found by Google ID: %s", userInfo.ID)
-		
+
 		// Update user info if needed
 		needsUpdate := false
 		if user.Email != userInfo.Email {
 			user.Email = userInfo.Email
 			needsUpdate = true
 		}
-		
+
 		// Update user name if it's empty
 		if user.UserName == "" && userInfo.Name != "" {
 			user.UserName = userInfo.Name
 			needsUpdate = true
 		}
-		
+
 		if needsUpdate {
 			if err := tx.Save(&user).Error; err != nil {
 				tx.Rollback()
 				return nil, fmt.Errorf("failed to update user: %w", err)
 			}
-			
+
 			if err := tx.Commit().Error; err != nil {
 				return nil, fmt.Errorf("failed to commit transaction: %w", err)
 			}
-			
+
 			log.Printf("[SUCCESS] Updated user: ID=%d, Email=%s", user.ID, user.Email)
 		} else {
 			// No changes, commit transaction

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	// "gorm.io/gorm"
 )
 
@@ -13,7 +14,7 @@ var validate = validator.New()
 
 // UserModel merepresentasikan tabel users di database
 type UserModel struct {
-	ID               uint      `gorm:"primaryKey" json:"id"`
+	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	UserName         string    `gorm:"size:50;not null" json:"user_name" validate:"required,min=3,max=50"`
 	Email            string    `gorm:"size:255;unique;not null" json:"email" validate:"required,email"`
 	Password         string    `gorm:"not null" json:"password" validate:"required,min=8"`

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
@@ -18,7 +19,7 @@ type ReadingModel struct {
 	UpdatedAt       time.Time      `gorm:"default:current_timestamp" json:"updated_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 	UnitID          uint           `json:"unit_id"`
-	CreatedBy       uint           `json:"created_by"`
+	CreatedBy       uuid.UUID      `gorm:"type:uuid;not null;constraint:OnDelete:CASCADE" json:"created_by"`
 }
 
 func (ReadingModel) TableName() string {

@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -15,10 +16,8 @@ type SectionQuizzesModel struct {
 	CreatedAt        time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt        time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
-	CreatedBy        uint           `gorm:"not null;constraint:OnDelete:CASCADE" json:"created_by"`
-	UnitID           uint           `gorm:"not null;constraint:OnDelete:CASCADE" json:"unit_id"`
-
-
+	CreatedBy        uuid.UUID      `gorm:"type:uuid;not null;constraint:OnDelete:CASCADE" json:"created_by"`
+	UnitID uint `gorm:"not null;constraint:OnDelete:CASCADE" json:"unit_id"`
 }
 
 func (SectionQuizzesModel) TableName() string {

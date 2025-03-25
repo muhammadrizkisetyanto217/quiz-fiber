@@ -14,7 +14,7 @@ type ThemesOrLevelsNewsModel struct {
 	CreatedAt       time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt       time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       gorm.DeletedAt `json:"deleted_at" gorm:"index"`
-	ThemesOrLevelID uint           `json:"themes_or_level_id"`
+	ThemesOrLevelsID uint           `json:"themes_or_levels_id"`
 }
 
 func (ThemesOrLevelsNewsModel) TableName() string {

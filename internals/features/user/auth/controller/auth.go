@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"gorm.io/gorm"
@@ -299,13 +300,22 @@ func AuthMiddleware(db *gorm.DB) fiber.Handler {
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Token has no expiration"})
 		}
 		log.Println("[DEBUG] Token Claims:", claims)
-		userID, exists := claims["id"].(float64)
+
+		idStr, exists := claims["id"].(string)
 		if !exists {
 			log.Println("[ERROR] User ID not found in token claims")
 			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - No user ID in token"})
 		}
-		c.Locals("user_id", uint(userID))
-		log.Println("[SUCCESS] User ID stored in context:", uint(userID))
+
+		userID, err := uuid.Parse(idStr)
+		if err != nil {
+			log.Println("[ERROR] Failed to parse UUID from token:", err)
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized - Invalid user ID format"})
+		}
+
+		c.Locals("user_id", userID)
+		log.Println("[SUCCESS] User ID stored in context:", userID)
+
 		expTime := time.Unix(int64(exp), 0)
 		log.Printf("[INFO] Token Expiration Time: %v", expTime)
 		if time.Now().Unix() > int64(exp) {

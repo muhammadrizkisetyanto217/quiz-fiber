@@ -5,6 +5,7 @@ import (
 
 	"quiz-fiber/internals/features/quizzes/quiz_section/model"
 
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -21,7 +22,7 @@ type UnitModel struct {
 	UpdatedAt           time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 	ThemesOrLevelID     uint           `gorm:"not null" json:"themes_or_level_id"`
-	CreatedBy           uint           `gorm:"not null" json:"created_by"`
+	CreatedBy           uuid.UUID      `gorm:"type:uuid;not null;constraint:OnDelete:CASCADE" json:"created_by"`
 
 	SectionQuizzes []model.SectionQuizzesModel `gorm:"foreignKey:UnitID" json:"section_quizzes"`
 }

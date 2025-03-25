@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS themes_or_levels (
 
 CREATE TABLE IF NOT EXISTS themes_or_levels_news (
     id SERIAL PRIMARY KEY,
-    themes_or_level_id INTEGER NOT NULL REFERENCES themes_or_levels(id) ON DELETE CASCADE,
+    themes_or_levels_id INTEGER NOT NULL REFERENCES themes_or_levels(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     is_public BOOLEAN DEFAULT TRUE,
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS units (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
     themes_or_level_id INT REFERENCES themes_or_levels(id) ON DELETE CASCADE,
-    created_by INT REFERENCES users(id) ON DELETE CASCADE
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE
 );
 
 

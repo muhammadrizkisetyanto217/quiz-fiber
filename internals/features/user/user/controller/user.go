@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"quiz-fiber/internals/features/user/user/models"
 
@@ -48,7 +49,14 @@ func (uc *UserController) GetUsers(c *fiber.Ctx) error {
 
 // GET user by ID
 func (uc *UserController) GetUser(c *fiber.Ctx) error {
-	id := c.Params("id")
+	idStr := c.Params("id")
+	userID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Println("[ERROR] Invalid UUID format:", err)
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID format"})
+	}
+
+	id := userID
 	var user models.UserModel
 
 	if err := uc.DB.First(&user, id).Error; err != nil {

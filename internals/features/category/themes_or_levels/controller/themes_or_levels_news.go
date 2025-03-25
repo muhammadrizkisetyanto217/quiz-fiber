@@ -71,7 +71,7 @@ func (tc *ThemesOrLevelsNewsController) Create(c *fiber.Ctx) error {
 		})
 	}
 
-	updateThemesOrLevelsNewsJSON(tc.DB, news.ThemesOrLevelID)
+	updateThemesOrLevelsNewsJSON(tc.DB, news.ThemesOrLevelsID)
 
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
 		"message": "Themes/Levels news created successfully",
@@ -105,7 +105,7 @@ func (tc *ThemesOrLevelsNewsController) Update(c *fiber.Ctx) error {
 		})
 	}
 
-	updateThemesOrLevelsNewsJSON(tc.DB, news.ThemesOrLevelID)
+	updateThemesOrLevelsNewsJSON(tc.DB, news.ThemesOrLevelsID)
 
 	return c.JSON(fiber.Map{
 		"message": "Themes/Levels news updated successfully",
@@ -132,7 +132,7 @@ func (tc *ThemesOrLevelsNewsController) Delete(c *fiber.Ctx) error {
 		})
 	}
 
-	updateThemesOrLevelsNewsJSON(tc.DB, news.ThemesOrLevelID)
+	updateThemesOrLevelsNewsJSON(tc.DB, news.ThemesOrLevelsID)
 
 	return c.JSON(fiber.Map{
 		"message": "Themes/Levels news deleted successfully",

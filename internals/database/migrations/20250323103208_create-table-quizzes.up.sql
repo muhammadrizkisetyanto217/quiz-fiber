@@ -8,6 +8,6 @@ CREATE TABLE IF NOT EXISTS section_quizzes (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
-    created_by INT REFERENCES users(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE,
     unit_id INT REFERENCES units(id) ON DELETE CASCADE
 );
