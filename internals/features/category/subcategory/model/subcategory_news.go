@@ -14,9 +14,9 @@ type SubcategoryNewsModel struct {
 	CreatedAt       time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt       time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       gorm.DeletedAt `json:"deleted_at" gorm:"index"`
-	SubCategoriesID int            `json:"subcategories_id"`
+	SubCategoriesID int            `gorm:"column:subcategory_id" json:"subcategories_id"`
 }
 
 func (SubcategoryNewsModel) TableName() string {
-	return "subcategory_news"
+	return "subcategories_news"
 }

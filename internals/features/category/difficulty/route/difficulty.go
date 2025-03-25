@@ -2,6 +2,7 @@ package route
 
 import (
 	difficultyController "quiz-fiber/internals/features/category/difficulty/controller"
+
 	userController "quiz-fiber/internals/features/user/auth/controller"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,12 +16,20 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	api := app.Group("/api", userController.AuthMiddleware(db))
 
 	// 🎯 Difficulty Routes
-	difficultyController := difficultyController.NewDifficultyController(db)
+	difficultyCtrl := difficultyController.NewDifficultyController(db)
 	difficultyRoutes := api.Group("/difficulties")
-	difficultyRoutes.Get("/", difficultyController.GetDifficulties)
-	difficultyRoutes.Get("/:id", difficultyController.GetDifficulty)
-	difficultyRoutes.Post("/", difficultyController.CreateDifficulty)
-	difficultyRoutes.Put("/:id", difficultyController.UpdateDifficulty)
-	difficultyRoutes.Delete("/:id", difficultyController.DeleteDifficulty)
+	difficultyRoutes.Get("/", difficultyCtrl.GetDifficulties)
+	difficultyRoutes.Get("/:id", difficultyCtrl.GetDifficulty)
+	difficultyRoutes.Post("/", difficultyCtrl.CreateDifficulty)
+	difficultyRoutes.Put("/:id", difficultyCtrl.UpdateDifficulty)
+	difficultyRoutes.Delete("/:id", difficultyCtrl.DeleteDifficulty)
 
+	// 📰 Difficulty News Routes
+	difficultyNewsCtrl := difficultyController.NewDifficultyNewsController(db)
+	difficultyNewsRoutes := api.Group("/difficulties-news")
+	difficultyNewsRoutes.Get("/:difficulty_id", difficultyNewsCtrl.GetNewsByDifficulty)
+	difficultyNewsRoutes.Get("/:id", difficultyNewsCtrl.GetNewsByID)
+	difficultyNewsRoutes.Post("/", difficultyNewsCtrl.CreateNews)
+	difficultyNewsRoutes.Put("/:id", difficultyNewsCtrl.UpdateNews)
+	difficultyNewsRoutes.Delete("/:id", difficultyNewsCtrl.DeleteNews)
 }

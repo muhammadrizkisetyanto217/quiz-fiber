@@ -15,13 +15,19 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	api := app.Group("/api", userController.AuthMiddleware(db))
 
 	// 🎯 Category Routes
-	categoryController := categoryController.NewCategoryController(db)
+	categoryCtrl := categoryController.NewCategoryController(db)
 	categoryRoutes := api.Group("/categories")
-	categoryRoutes.Get("/", categoryController.GetCategories)
-	categoryRoutes.Get("/:id", categoryController.GetCategory)
-	categoryRoutes.Get("/difficulty/:difficulty_id", categoryController.GetCategoriesByDifficulty)
-	categoryRoutes.Post("/", categoryController.CreateCategory)
-	categoryRoutes.Put("/:id", categoryController.UpdateCategory)
-	categoryRoutes.Delete("/:id", categoryController.DeleteCategory)
+	categoryRoutes.Get("/", categoryCtrl.GetCategories)
+	categoryRoutes.Get("/:id", categoryCtrl.GetCategory)
+	categoryRoutes.Get("/difficulty/:difficulty_id", categoryCtrl.GetCategoriesByDifficulty)
+	categoryRoutes.Post("/", categoryCtrl.CreateCategory)
+	categoryRoutes.Put("/:id", categoryCtrl.UpdateCategory)
+	categoryRoutes.Delete("/:id", categoryCtrl.DeleteCategory)
+
+	// 📰 Category News Routes
+	categoryNewsCtrl := categoryController.NewCategoryNewsController(db)
+	categoryNewsRoutes := api.Group("/categories-news")
+	categoryNewsRoutes.Get("/:category_id", categoryNewsCtrl.GetAll)
+	categoryNewsRoutes.Get("/:id", categoryNewsCtrl.GetByID)
 
 }

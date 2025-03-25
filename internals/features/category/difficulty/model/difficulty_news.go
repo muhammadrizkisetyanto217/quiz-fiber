@@ -14,9 +14,9 @@ type DifficultyNews struct {
 	CreatedAt    time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `json:"deleted_at" gorm:"index"`
-	DifficultyID uint           `gorm:"not null"`
+	DifficultyID uint `gorm:"not null" json:"difficulty_id"`
 }
 
 func (DifficultyNews) TableName() string {
-	return "difficulty_news"
+	return "difficulties_news"
 }

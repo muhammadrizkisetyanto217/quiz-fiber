@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS difficulties (
     image_url VARCHAR(100),
     update_news JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS difficulties_news (
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS categories (
     update_news JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     difficulty_id INT REFERENCES difficulties(id)
 );
 
@@ -47,7 +49,6 @@ CREATE TABLE IF NOT EXISTS categories_news (
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
-
 
 
 CREATE TABLE IF NOT EXISTS subcategories (

@@ -15,13 +15,21 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	api := app.Group("/api", userController.AuthMiddleware(db))
 
 	// 🎯 Unit Routes
-	unitController := unitController.NewUnitController(db)
+	unitCtrl := unitController.NewUnitController(db)
 	unitRoutes := api.Group("/units")
-	unitRoutes.Get("/", unitController.GetUnits)
-	unitRoutes.Get("/:id", unitController.GetUnit)
-	unitRoutes.Get("/themes-or-levels/:themesOrLevelId", unitController.GetUnitByThemesOrLevels)
-	unitRoutes.Post("/", unitController.CreateUnit)
-	unitRoutes.Put("/:id", unitController.UpdateUnit)
-	unitRoutes.Delete("/:id", unitController.DeleteUnit)
+	unitRoutes.Get("/", unitCtrl.GetUnits)
+	unitRoutes.Get("/:id", unitCtrl.GetUnit)
+	unitRoutes.Get("/themes-or-levels/:themesOrLevelId", unitCtrl.GetUnitByThemesOrLevels)
+	unitRoutes.Post("/", unitCtrl.CreateUnit)
+	unitRoutes.Put("/:id", unitCtrl.UpdateUnit)
+	unitRoutes.Delete("/:id", unitCtrl.DeleteUnit)
 
+	// 📰 Unit News Routes
+	unitNewsCtrl := unitController.NewUnitNewsController(db)
+	unitNewsRoutes := api.Group("/units-news")
+	unitNewsRoutes.Get("/", unitNewsCtrl.GetAll)
+	unitNewsRoutes.Get("/:id", unitNewsCtrl.GetByID)
+	unitNewsRoutes.Post("/", unitNewsCtrl.Create)
+	unitNewsRoutes.Put("/:id", unitNewsCtrl.Update)
+	unitNewsRoutes.Delete("/:id", unitNewsCtrl.Delete)
 }

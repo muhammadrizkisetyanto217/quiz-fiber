@@ -1,5 +1,5 @@
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_name VARCHAR(50) NOT NULL CHECK (LENGTH(user_name) >= 3 AND LENGTH(user_name) <= 50),
     email VARCHAR(255) UNIQUE NOT NULL CHECK (POSITION('@' IN email) > 1),
     password VARCHAR(250),

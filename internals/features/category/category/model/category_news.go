@@ -3,25 +3,20 @@ package model
 import (
 	"time"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type CategoryNewsModel struct {
-	ID               uint           `gorm:"primaryKey" json:"id"`
-	Name             string         `gorm:"size:255;not null" json:"name"`
-	Status           string         `gorm:"size:10;default:'pending';check:status IN ('active', 'pending', 'archived')" json:"status"`
-	DescriptionShort string         `gorm:"size:200" json:"description_short"`
-	DescriptionLong  string         `gorm:"size:3000" json:"description_long"`
-	TotalCategories  int            `json:"total_categories"`
-	ImageURL         string         `gorm:"size:100" json:"image_url"`
-	UpdateNews       datatypes.JSON `json:"update_news"` // pakai JSONB di PostgreSQL
-	CreatedAt        time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt        time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `json:"deleted_at" gorm:"index"`
-	CategoriesID     int            `json:"categories_id"`
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	Title        string         `gorm:"type:varchar(255);not null"`
+	Description  string         `gorm:"type:text;not null"`
+	IsPublic     bool           `gorm:"default:true"`
+	CreatedAt    time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+	CategoryID int            `json:"category_id"`
 }
 
 func (CategoryNewsModel) TableName() string {
-	return "category_news"
+	return "categories_news"
 }

@@ -1,9 +1,9 @@
 package route
 
 import (
-
 	subcategoryController "quiz-fiber/internals/features/category/subcategory/controller"
 	userController "quiz-fiber/internals/features/user/auth/controller"
+
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -15,13 +15,22 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	api := app.Group("/api", userController.AuthMiddleware(db))
 
 	// 🎯 Subcategory Routes
-	subcategoryController := subcategoryController.NewSubcategoryController(db)
+	subcategoryCtrl := subcategoryController.NewSubcategoryController(db)
 	subcategoryRoutes := api.Group("/subcategories")
-	subcategoryRoutes.Get("/", subcategoryController.GetSubcategories)
-	subcategoryRoutes.Get("/:id", subcategoryController.GetSubcategory)
-	subcategoryRoutes.Get("/category/:category_id", subcategoryController.GetSubcategoriesByCategory)
-	subcategoryRoutes.Post("/", subcategoryController.CreateSubcategory)
-	subcategoryRoutes.Put("/:id", subcategoryController.UpdateSubcategory)
-	subcategoryRoutes.Delete("/:id", subcategoryController.DeleteSubcategory)
+	subcategoryRoutes.Get("/", subcategoryCtrl.GetSubcategories)
+	subcategoryRoutes.Get("/:id", subcategoryCtrl.GetSubcategory)
+	subcategoryRoutes.Get("/category/:category_id", subcategoryCtrl.GetSubcategoriesByCategory)
+	subcategoryRoutes.Post("/", subcategoryCtrl.CreateSubcategory)
+	subcategoryRoutes.Put("/:id", subcategoryCtrl.UpdateSubcategory)
+	subcategoryRoutes.Delete("/:id", subcategoryCtrl.DeleteSubcategory)
+
+	// 📰 Subcategory News Routes
+	subcategoryNewsCtrl := subcategoryController.NewSubcategoryNewsController(db)
+	subcategoryNewsRoutes := api.Group("/subcategories-news")
+	subcategoryNewsRoutes.Get("/:subcategory_id", subcategoryNewsCtrl.GetAll)
+	subcategoryNewsRoutes.Get("/:id", subcategoryNewsCtrl.GetByID)
+	subcategoryNewsRoutes.Post("/", subcategoryNewsCtrl.Create)
+	subcategoryNewsRoutes.Put("/:id", subcategoryNewsCtrl.Update)
+	subcategoryNewsRoutes.Delete("/:id", subcategoryNewsCtrl.Delete)
 
 }
