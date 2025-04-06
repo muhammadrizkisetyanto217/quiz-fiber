@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"quiz-fiber/internals/features/quizzes/quiz_section/model"
+	"quiz-fiber/internals/features/quizzes/quizzes/model"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"

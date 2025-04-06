@@ -11,3 +11,44 @@ CREATE TABLE IF NOT EXISTS section_quizzes (
     created_by UUID REFERENCES users(id) ON DELETE CASCADE,
     unit_id INT REFERENCES units(id) ON DELETE CASCADE
 );
+
+
+CREATE TABLE IF NOT EXISTS quizzes (
+    id SERIAL PRIMARY KEY,
+    name_quizzes VARCHAR(50) UNIQUE NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
+    total_question INT,
+    icon_url VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    section_quizzes_id INT REFERENCES section_quizzes(id) ON DELETE CASCADE,
+    unit_Id INT REFERENCES units(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS exams (
+    id SERIAL PRIMARY KEY,
+    name_exams VARCHAR(50) NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
+    total_question INT,
+    icon_url VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    unit_id INT REFERENCES units(id) ON DELETE CASCADE, -- ✅ Perbaiki "unit_Id" menjadi "unit_id"
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS evaluations (
+    id SERIAL PRIMARY KEY,
+    name_evaluation VARCHAR(50) NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
+    total_question INT,
+    icon_url VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    unit_id INT REFERENCES units(id) ON DELETE CASCADE, 
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE
+);

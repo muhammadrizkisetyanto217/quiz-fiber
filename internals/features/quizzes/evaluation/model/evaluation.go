@@ -12,7 +12,6 @@ type EvaluationModel struct {
 	ID             uint           `gorm:"primaryKey" json:"id"`
 	NameEvaluation string         `gorm:"size:50;not null" json:"name_evaluation" validate:"required,max=50"`
 	Status         string         `gorm:"type:varchar(10);default:'pending';check:status IN ('active', 'pending', 'archived')" json:"status" validate:"required,oneof=active pending archived"`
-	Point          int            `gorm:"not null;default:30" json:"point" validate:"gte=0"`
 	TotalQuestion  *int           `json:"total_question,omitempty" validate:"omitempty,gte=0"`
 	IconURL        *string        `gorm:"size:100" json:"icon_url,omitempty" validate:"omitempty,url"`
 	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`

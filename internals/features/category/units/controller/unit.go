@@ -77,16 +77,28 @@ func (uc *UnitController) GetUnitByThemesOrLevels(c *fiber.Ctx) error {
 func (uc *UnitController) CreateUnit(c *fiber.Ctx) error {
 	log.Println("[INFO] Received request to create unit")
 
-	var single model.UnitModel
-	var multiple []model.UnitModel
+	var (
+		single   model.UnitModel
+		multiple []model.UnitModel
+	)
 
-	// 🧠 Coba parse sebagai array terlebih dahulu
-	if err := c.BodyParser(&multiple); err == nil && len(multiple) > 0 {
-		log.Printf("[DEBUG] Parsed %d units as array\n", len(multiple))
+	raw := c.Body() // Ambil raw body
+	if len(raw) > 0 && raw[0] == '[' {
+		// Dipastikan ini array
+		if err := c.BodyParser(&multiple); err != nil {
+			log.Printf("[ERROR] Failed to parse unit array: %v", err)
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON array"})
+		}
 
-		// ✅ Validasi setiap data jika diperlukan
+		if len(multiple) == 0 {
+			log.Println("[ERROR] Received empty array of units")
+			return c.Status(400).JSON(fiber.Map{"error": "Array of units is empty"})
+		}
+
+		// Validasi setiap item
 		for i, unit := range multiple {
 			if unit.ThemesOrLevelID == 0 || unit.Name == "" {
+				log.Printf("[ERROR] Invalid unit at index %d: %+v\n", i, unit)
 				return c.Status(400).JSON(fiber.Map{
 					"error":      "Each unit must have a valid themes_or_level_id and name",
 					"index":      i,
@@ -95,34 +107,35 @@ func (uc *UnitController) CreateUnit(c *fiber.Ctx) error {
 			}
 		}
 
-		// ✅ Simpan ke database
+		// Insert batch
 		if err := uc.DB.Create(&multiple).Error; err != nil {
-			log.Printf("[ERROR] Failed to insert multiple units: %v\n", err)
+			log.Printf("[ERROR] Failed to insert multiple units: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create units"})
 		}
 
-		log.Printf("[SUCCESS] %d units created successfully\n", len(multiple))
+		log.Printf("[SUCCESS] Inserted %d units", len(multiple))
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 			"message": "Multiple units created successfully",
 			"data":    multiple,
 		})
 	}
 
-	// 🔁 Jika bukan array, parse sebagai satu objek
+	// Fallback: parse single object
 	if err := c.BodyParser(&single); err != nil {
-		log.Printf("[ERROR] Failed to parse single unit input: %v\n", err)
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		log.Printf("[ERROR] Failed to parse single unit input: %v", err)
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Invalid request format (expected object or array)",
+		})
 	}
 
 	log.Printf("[DEBUG] Parsed single unit: %+v\n", single)
 
-	// ✅ Validasi minimal
 	if single.ThemesOrLevelID == 0 || single.Name == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "themes_or_level_id and name are required"})
 	}
 
 	if err := uc.DB.Create(&single).Error; err != nil {
-		log.Printf("[ERROR] Failed to insert single unit: %v\n", err)
+		log.Printf("[ERROR] Failed to insert unit: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create unit"})
 	}
 
