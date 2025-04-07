@@ -4,6 +4,8 @@ import (
 	"log"
 	questionModel "quiz-fiber/internals/features/quizzes/question/model"
 	tooltipModel "quiz-fiber/internals/features/utils/tooltip/model"
+	"regexp"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lib/pq"
@@ -63,26 +65,26 @@ func (qqc *QuizzesQuestionController) GetQuestion(c *fiber.Ctx) error {
 
 // Fungsi GetQuestionsByQuizID (seperti sebelumnya, dengan filter SourceTypeID = 1)
 func (qqc *QuizzesQuestionController) GetQuestionsByQuizID(c *fiber.Ctx) error {
-    quizID := c.Params("quizId") // Mengambil quizId dari parameter rute
-    log.Printf("[INFO] Fetching quiz questions for source_id: %s\n", quizID)
+	quizID := c.Params("quizId") // Mengambil quizId dari parameter rute
+	log.Printf("[INFO] Fetching quiz questions for source_id: %s\n", quizID)
 
-    var questions []questionModel.QuestionModel
-    // Query menggunakan source_id dan source_type_id = 1 (untuk Quiz)
-    if err := qqc.DB.Where("source_id = ? AND source_type_id = 1", quizID).Find(&questions).Error; err != nil {
-        log.Printf("[ERROR] Failed to fetch quiz questions for source_id %s: %v\n", quizID, err)
-        return c.Status(500).JSON(fiber.Map{
-            "status":  false,
-            "message": "Failed to fetch quiz questions by quiz ID",
-        })
-    }
+	var questions []questionModel.QuestionModel
+	// Query menggunakan source_id dan source_type_id = 1 (untuk Quiz)
+	if err := qqc.DB.Where("source_id = ? AND source_type_id = 1", quizID).Find(&questions).Error; err != nil {
+		log.Printf("[ERROR] Failed to fetch quiz questions for source_id %s: %v\n", quizID, err)
+		return c.Status(500).JSON(fiber.Map{
+			"status":  false,
+			"message": "Failed to fetch quiz questions by quiz ID",
+		})
+	}
 
-    log.Printf("[SUCCESS] Retrieved %d quiz questions for source_id %s\n", len(questions), quizID)
-    return c.JSON(fiber.Map{
-        "status":  true,
-        "message": "Quiz questions fetched successfully by quiz ID",
-        "total":   len(questions),
-        "data":    questions,
-    })
+	log.Printf("[SUCCESS] Retrieved %d quiz questions for source_id %s\n", len(questions), quizID)
+	return c.JSON(fiber.Map{
+		"status":  true,
+		"message": "Quiz questions fetched successfully by quiz ID",
+		"total":   len(questions),
+		"data":    questions,
+	})
 }
 
 // Fungsi GetQuestionsByEvaluationID (seperti sebelumnya, dengan filter SourceTypeID = 2)
@@ -108,7 +110,6 @@ func (qqc *QuizzesQuestionController) GetQuestionsByEvaluationID(c *fiber.Ctx) e
 	})
 }
 
-
 // Fungsi GetQuestionsByExamID (seperti sebelumnya, dengan filter SourceTypeID = 3)
 func (qqc *QuizzesQuestionController) GetQuestionsByExamID(c *fiber.Ctx) error {
 	examID := c.Params("examId")
@@ -131,8 +132,6 @@ func (qqc *QuizzesQuestionController) GetQuestionsByExamID(c *fiber.Ctx) error {
 		"data":    questions,
 	})
 }
-
-
 
 // POST create quiz question
 func (qqc *QuizzesQuestionController) CreateQuestion(c *fiber.Ctx) error {
@@ -259,6 +258,80 @@ func (qqc *QuizzesQuestionController) DeleteQuestion(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":  true,
 		"message": "Quiz question deleted successfully",
+	})
+}
+
+func (qqc *QuizzesQuestionController) MarkKeywords(text string, tooltips []tooltipModel.Tooltip) string {
+	log.Printf("[DEBUG] Original question text: %s\n", text)
+
+	for _, tooltip := range tooltips {
+		keyword := tooltip.Keyword
+		keywordID := strconv.Itoa(int(tooltip.ID))
+
+		// Gunakan regex case-insensitive, tapi tetap pertahankan casing asli match-nya
+		re := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(keyword) + `\b`)
+		text = re.ReplaceAllStringFunc(text, func(match string) string {
+			return match + "=" + keywordID
+		})
+
+		log.Printf("[DEBUG] Replacing all '%s' with '%s' in text", keyword, keyword+"="+keywordID)
+	}
+
+	log.Printf("[DEBUG] Modified question text: %s\n", text)
+	return text
+}
+
+func (qqc *QuizzesQuestionController) GetQuestionWithTooltipsMarked(c *fiber.Ctx) error {
+	id := c.Params("id")
+	log.Printf("[INFO] Fetching marked quiz question with tooltips, ID: %s\n", id)
+
+	var question questionModel.QuestionModel
+	if err := qqc.DB.First(&question, id).Error; err != nil {
+		log.Println("[ERROR] Quiz question not found:", err)
+		return c.Status(404).JSON(fiber.Map{
+			"status":  false,
+			"message": "Quiz question not found",
+		})
+	}
+
+	var tooltips []tooltipModel.Tooltip
+	if len(question.TooltipsID) > 0 {
+		if err := qqc.DB.Where("id = ANY(?)", pq.Array(question.TooltipsID)).Find(&tooltips).Error; err != nil {
+			log.Println("[ERROR] Failed to fetch tooltips:", err)
+			return c.Status(500).JSON(fiber.Map{
+				"status":  false,
+				"message": "Failed to fetch tooltips",
+			})
+		}
+	}
+
+	// Tandai keyword di berbagai bagian teks
+	markedText := qqc.MarkKeywords(question.QuestionText, tooltips)
+	markedExplain := qqc.MarkKeywords(question.ExplainQuestion, tooltips)
+	markedAnswer := qqc.MarkKeywords(question.AnswerText, tooltips)
+	markedParagraph := qqc.MarkKeywords(question.ParagraphHelp, tooltips)
+
+	log.Printf("[SUCCESS] Marked and fetched quiz question ID: %s\n", id)
+
+	return c.JSON(fiber.Map{
+		"status":  true,
+		"message": "Quiz question with marked tooltips fetched successfully",
+		"quiz_question": fiber.Map{
+			"id":               question.ID,
+			"source_type_id":   question.SourceTypeID,
+			"source_id":        question.SourceID,
+			"question_text":    markedText,
+			"question_answer":  question.QuestionAnswer,
+			"question_correct": question.QuestionCorrect,
+			"tooltips_id":      question.TooltipsID,
+			"status":           question.Status,
+			"paragraph_help":   markedParagraph,
+			"explain_question": markedExplain,
+			"answer_text":      markedAnswer,
+			"created_at":       question.CreatedAt,
+			"updated_at":       question.UpdatedAt,
+		},
+		"tooltips": tooltips,
 	})
 }
 
