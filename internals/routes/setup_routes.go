@@ -12,6 +12,11 @@ import (
 
 	// Quizzes
 	SectionQuizzesRoutes "quiz-fiber/internals/features/quizzes/quizzes/route"
+	questionRoute "quiz-fiber/internals/features/quizzes/question/route"
+	readingRoute "quiz-fiber/internals/features/quizzes/reading/route"
+
+	// Utils
+	tooltipRoute "quiz-fiber/internals/features/utils/tooltip/route"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -36,7 +41,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 
 	//* Quizzes
 	SectionQuizzesRoutes.SectionQuizzesRoutes(app, db)
+	questionRoute.QuestionRoutes(app, db)
+	readingRoute.ReadingRoutes(app, db)
+	
 
+	
+	//* Utils
+	tooltipRoute.TooltipRoute(app, db)
 
 
 }

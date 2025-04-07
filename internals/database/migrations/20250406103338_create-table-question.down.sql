@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS tooltips;
+
+DROP TABLE IF EXISTS questions;
+
+DROP TABLE IF EXISTS readings;

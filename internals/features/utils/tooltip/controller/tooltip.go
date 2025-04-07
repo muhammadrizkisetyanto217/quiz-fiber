@@ -2,7 +2,6 @@ package utils
 
 import (
 	"log"
-	"time"
 
 	"quiz-fiber/internals/database"
 	"quiz-fiber/internals/features/utils/tooltip/model"
@@ -21,7 +20,7 @@ func NewTooltipsController(db *gorm.DB) *TooltipsController {
 	return &TooltipsController{DB: db}
 }
 
-func (tc *TooltipsController) GetTooltips(c *fiber.Ctx) error {
+func (tc *TooltipsController) GetTooltipsID(c *fiber.Ctx) error {
 	log.Println("Fetching tooltips for given keywords")
 
 	var request struct {
@@ -52,44 +51,78 @@ func (tc *TooltipsController) GetTooltips(c *fiber.Ctx) error {
 }
 
 // InsertTooltip menangani permintaan untuk menambahkan tooltips baru
-func (tc *TooltipsController) InsertTooltip(c *fiber.Ctx) error {
-	log.Println("Inserting new tooltip")
+func (tc *TooltipsController) CreateTooltip(c *fiber.Ctx) error {
+	log.Println("[INFO] Received request to create tooltip(s)")
 
-	var request struct {
-		Keyword          string `json:"keyword"`
-		DescriptionShort string `json:"description_short"`
-		DescriptionLong  string `json:"description_long"`
+	var (
+		single   model.Tooltip
+		multiple []model.Tooltip
+	)
+
+	raw := c.Body() // Ambil raw JSON body
+	if len(raw) > 0 && raw[0] == '[' {
+		// JSON berupa array
+		if err := c.BodyParser(&multiple); err != nil {
+			log.Printf("[ERROR] Failed to parse tooltip array: %v", err)
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON array"})
+		}
+
+		if len(multiple) == 0 {
+			log.Println("[ERROR] Received empty tooltip array")
+			return c.Status(400).JSON(fiber.Map{"error": "Tooltip array is empty"})
+		}
+
+		// Validasi setiap item
+		for i, tip := range multiple {
+			if tip.Keyword == "" || tip.DescriptionShort == "" || tip.DescriptionLong == "" {
+				log.Printf("[ERROR] Invalid tooltip at index %d: %+v\n", i, tip)
+				return c.Status(400).JSON(fiber.Map{
+					"error": "Each tooltip must have keyword, description_short, and description_long",
+					"index": i,
+					"data":  tip,
+				})
+			}
+		}
+
+		// Insert batch
+		if err := tc.DB.Create(&multiple).Error; err != nil {
+			log.Printf("[ERROR] Failed to insert multiple tooltips: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create tooltips"})
+		}
+
+		log.Printf("[SUCCESS] Inserted %d tooltips", len(multiple))
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"message": "Multiple tooltips created successfully",
+			"data":    multiple,
+		})
 	}
 
-	// Parsing request body
-	if err := c.BodyParser(&request); err != nil {
-		log.Println("Error parsing request:", err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+	// Fallback: parse single object
+	if err := c.BodyParser(&single); err != nil {
+		log.Printf("[ERROR] Failed to parse single tooltip: %v", err)
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Invalid request format (expected object or array)",
+		})
 	}
 
-	// Cek apakah keyword sudah ada di database
-	var existingTooltip model.Tooltip
-	if err := tc.DB.Where("keyword = ?", request.Keyword).First(&existingTooltip).Error; err == nil {
-		log.Println("Keyword already exists:", request.Keyword)
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Keyword already exists"})
+	log.Printf("[DEBUG] Parsed single tooltip: %+v", single)
+
+	if single.Keyword == "" || single.DescriptionShort == "" || single.DescriptionLong == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "keyword, description_short, and description_long are required"})
 	}
 
-	// Insert data baru
-	newTooltip := model.Tooltip{
-		Keyword:          request.Keyword,
-		DescriptionShort: request.DescriptionShort,
-		DescriptionLong:  request.DescriptionLong,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+	if err := tc.DB.Create(&single).Error; err != nil {
+		log.Printf("[ERROR] Failed to insert tooltip: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create tooltip"})
 	}
 
-	if err := tc.DB.Create(&newTooltip).Error; err != nil {
-		log.Println("Error inserting tooltip:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert tooltip"})
-	}
-
-	return c.JSON(fiber.Map{"message": "Tooltip added successfully", "data": newTooltip})
+	log.Printf("[SUCCESS] Tooltip created: ID=%d, Keyword=%s", single.ID, single.Keyword)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "Tooltip created successfully",
+		"data":    single,
+	})
 }
+
 
 // GetAllTooltips menangani permintaan untuk mendapatkan semua data tooltips
 func (tc *TooltipsController) GetAllTooltips(c *fiber.Ctx) error {
