@@ -14,7 +14,7 @@ type UserEvaluationModel struct {
 	UserID          uuid.UUID `gorm:"not null" json:"user_id"`
 	EvaluationID    uint      `gorm:"not null;column:evaluation_id" json:"evaluation_id"`
 	Attempt         int       `gorm:"default:1;not null" json:"attempt"`
-	PercentageGrade float32   `gorm:"default:0;not null" json:"percentage_grade"`
+	PercentageGrade int       `gorm:"default:0;not null" json:"percentage_grade"`
 	TimeDuration    int       `gorm:"default:0;not null" json:"time_duration"`
 	Point           int       `gorm:"default:0;not null" json:"point"`
 	CreatedAt       time.Time `gorm:"autoCreateTime" json:"created_at"`
