@@ -11,7 +11,7 @@ type UserQuizzesModel struct {
 	UserID          uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
 	QuizID          uint      `gorm:"column:quiz_id;not null" json:"quiz_id"` // Ubah ke quiz_id sesuai tabel baru
 	Attempt         int       `gorm:"default:1;not null" json:"attempt"`
-	PercentageGrade float32   `gorm:"default:0;not null" json:"percentage_grade"`
+	PercentageGrade int   `gorm:"default:0;not null" json:"percentage_grade"`
 	TimeDuration    int       `gorm:"default:0;not null" json:"time_duration"`
 	Point           int       `gorm:"default:0;not null" json:"point"`
 	CreatedAt       time.Time `gorm:"default:current_timestamp" json:"created_at"`

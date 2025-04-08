@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS user_quizzes (
     user_id UUID NOT NULL,
     quiz_id INTEGER NOT NULL,
     attempt INTEGER NOT NULL DEFAULT 1,
-    percentage_grade DOUBLE PRECISION NOT NULL DEFAULT 0,
+    percentage_grade INTEGER NOT NULL DEFAULT 0,
     time_duration INTEGER NOT NULL DEFAULT 0,
     point INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS user_section_quizzes (
     user_id UUID NOT NULL,
     section_quizzes_id INTEGER NOT NULL,
     complete_quiz INTEGER[] NOT NULL DEFAULT '{}',
-    total_quiz INTEGER NOT NULL DEFAULT 0,
+    total_quiz INTEGER[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,10 +32,10 @@ CREATE TABLE IF NOT EXISTS user_unit (
     unit_id INTEGER NOT NULL,
     is_reading BOOLEAN NOT NULL DEFAULT FALSE,
     is_evaluation BOOLEAN NOT NULL DEFAULT FALSE,
-    complete_section_quizzes INTEGER NOT NULL DEFAULT 0,
-    total_section_quizzes INTEGER NOT NULL DEFAULT 0,
-    grade_exam DOUBLE PRECISION,
-    grade_result DOUBLE PRECISION,
+    complete_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
+    total_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
+    grade_exam INTEGER NOT NULL DEFAULT 0,
+    grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS user_themes_or_levels (
     user_id UUID NOT NULL,
     themes_or_levels_id INTEGER NOT NULL,
     complete_unit INTEGER[] NOT NULL DEFAULT '{}',
-    total_unit INTEGER NOT NULL DEFAULT 0,
-    grade_result DOUBLE PRECISION,
+    total_unit INTEGER[] NOT NULL DEFAULT '{}',
+    grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS user_subcategory (
     user_id UUID NOT NULL,
     subcategory_id INTEGER NOT NULL,
     complete_themes_or_levels INTEGER[] NOT NULL DEFAULT '{}',
-    total_themes_or_levels INTEGER NOT NULL DEFAULT 0,
-    grade_result DOUBLE PRECISION,
+    total_themes_or_levels INTEGER[] NOT NULL DEFAULT '{}',
+    grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -74,8 +74,8 @@ CREATE TABLE IF NOT EXISTS user_category (
     user_id UUID NOT NULL,
     category_id INTEGER NOT NULL,
     complete_category INTEGER[] NOT NULL DEFAULT '{}',
-    total_category INTEGER NOT NULL DEFAULT 0,
-    grade_result DOUBLE PRECISION,
+    total_category INTEGER[] NOT NULL DEFAULT '{}',
+    grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

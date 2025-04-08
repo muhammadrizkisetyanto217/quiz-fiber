@@ -7,7 +7,7 @@ import (
 )
 
 type UnitNewsModel struct {
-	ID          uint           `gorm:"primaryKey" json:"id"`
+	ID          int           `gorm:"primaryKey" json:"id"`
 	Title       string         `gorm:"type:varchar(255);not null"`
 	Description string         `gorm:"type:text;not null"`
 	IsPublic    bool           `gorm:"default:true"`

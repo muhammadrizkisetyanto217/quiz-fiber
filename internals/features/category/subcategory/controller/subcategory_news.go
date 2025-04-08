@@ -71,7 +71,7 @@ func (sc *SubcategoryNewsController) Create(c *fiber.Ctx) error {
 		})
 	}
 
-	updateSubcategoryNewsJSON(sc.DB, news.SubCategoriesID)
+	updateSubcategoryNewsJSON(sc.DB, int(news.SubCategoriesID))
 
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
 		"message": "Subcategory news created successfully",
@@ -105,7 +105,7 @@ func (sc *SubcategoryNewsController) Update(c *fiber.Ctx) error {
 		})
 	}
 
-	updateSubcategoryNewsJSON(sc.DB, news.SubCategoriesID)
+	updateSubcategoryNewsJSON(sc.DB, int(news.SubCategoriesID))
 
 	return c.JSON(fiber.Map{
 		"message": "Subcategory news updated successfully",
@@ -132,7 +132,7 @@ func (sc *SubcategoryNewsController) Delete(c *fiber.Ctx) error {
 		})
 	}
 
-	updateSubcategoryNewsJSON(sc.DB, news.SubCategoriesID)
+	updateSubcategoryNewsJSON(sc.DB, int(news.SubCategoriesID))
 
 	return c.JSON(fiber.Map{
 		"message": "Subcategory news deleted successfully",
