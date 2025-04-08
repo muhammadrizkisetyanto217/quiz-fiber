@@ -9,15 +9,16 @@ import (
 
 // Fungsi untuk memperbarui UserSectionQuizzesModel
 // UserSectionQuizzesModel menyimpan daftar kuis yang telah diselesaikan dalam suatu section
-type UserSectionQuizzesModel struct {
+type UserThemesOrLevelsModel struct {
 	ID               uint          `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID           uuid.UUID     `gorm:"type:uuid;not null" json:"user_id"`
-	SectionQuizzesID uint          `gorm:"column:section_quizzes_id;not null" json:"section_quizzes_id"`
-	CompleteQuiz     pq.Int64Array `gorm:"type:integer[]" json:"complete_quiz"`
-	TotalQuiz        int           `gorm:"default:0" json:"total_quiz"`
+	ThemesOrLevelsID uint          `gorm:"column:themes_or_levels_id;not null" json:"themes_or_levels_id"`
+	CompleteUnit     pq.Int64Array `gorm:"type:integer[]" json:"complete_unit"`
+	TotalUnit        int           `gorm:"default:0" json:"total_unit"`
+	GradeResult      float64       `json:"grade_result"`
 	CreatedAt        time.Time     `gorm:"default:current_timestamp" json:"created_at"`
 }
 
-func (UserSectionQuizzesModel) TableName() string {
-	return "user_section_quizzes"
+func (UserThemesOrLevelsModel) TableName() string {
+	return "user_themes_or_levels"
 }

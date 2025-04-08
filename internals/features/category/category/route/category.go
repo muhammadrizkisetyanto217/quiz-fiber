@@ -29,5 +29,8 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	categoryNewsRoutes := api.Group("/categories-news")
 	categoryNewsRoutes.Get("/:category_id", categoryNewsCtrl.GetAll)
 	categoryNewsRoutes.Get("/:id", categoryNewsCtrl.GetByID)
+	categoryNewsRoutes.Post("/", categoryNewsCtrl.Create)
+	categoryNewsRoutes.Put("/:id", categoryNewsCtrl.Update)
+	categoryNewsRoutes.Delete("/:id", categoryNewsCtrl.Delete)
 
 }

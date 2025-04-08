@@ -5,11 +5,12 @@ CREATE TABLE IF NOT EXISTS section_quizzes (
     status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
     materials_quizzes TEXT NOT NULL,
     icon_url VARCHAR(100),
+    total_quizzes INT DEFAULT 0, -- Tambahan kolom ini
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    unit_id INT REFERENCES units(id) ON DELETE CASCADE,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
-    created_by UUID REFERENCES users(id) ON DELETE CASCADE,
-    unit_id INT REFERENCES units(id) ON DELETE CASCADE
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE
 );
 
 
@@ -23,7 +24,6 @@ CREATE TABLE IF NOT EXISTS quizzes (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
     section_quizzes_id INT REFERENCES section_quizzes(id) ON DELETE CASCADE,
-    unit_Id INT REFERENCES units(id) ON DELETE CASCADE,
     created_by UUID REFERENCES users(id) ON DELETE CASCADE
 );
 

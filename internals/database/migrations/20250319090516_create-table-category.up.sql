@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS units (
     description_overview TEXT NOT NULL,
     image_url VARCHAR(100),
     update_news JSONB,
+    total_section_quizzes INT DEFAULT 0, -- ✅ Tambahan kolom ini
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,

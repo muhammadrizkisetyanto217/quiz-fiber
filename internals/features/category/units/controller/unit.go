@@ -21,9 +21,15 @@ func (uc *UnitController) GetUnits(c *fiber.Ctx) error {
 	log.Println("[INFO] Fetching all units")
 	var units []model.UnitModel
 
-	if err := uc.DB.Preload("SectionQuizzes").Find(&units).Error; err != nil {
+	if err := uc.DB.
+		Preload("SectionQuizzes").
+		Preload("SectionQuizzes.Quizzes"). // ✅ Preload ke quizzes
+		Find(&units).Error; err != nil {
+
 		log.Println("[ERROR] Failed to fetch units:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch units"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch units",
+		})
 	}
 
 	log.Printf("[SUCCESS] Retrieved %d units\n", len(units))

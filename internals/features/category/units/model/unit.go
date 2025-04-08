@@ -18,6 +18,7 @@ type UnitModel struct {
 	DescriptionOverview string         `gorm:"type:text;not null" json:"description_overview"`
 	ImageURL            string         `gorm:"type:varchar(100)" json:"image_url"`
 	UpdateNews          datatypes.JSON `gorm:"type:jsonb" json:"update_news"`
+	TotalSectionQuizzes int            `gorm:"default:0" json:"total_section_quizzes"` // ✅ Kolom tambahan
 	CreatedAt           time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt           time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at"`
@@ -32,25 +33,22 @@ func (UnitModel) TableName() string {
 }
 
 // Hook AfterSave untuk memperbarui total_unit di ThemesOrLevelModel setelah insert/update
-func (u *UnitModel) AfterSave(tx *gorm.DB) (err error) {
+// ✅ AfterCreate Hook untuk UnitModel
+func (u *UnitModel) AfterCreate(tx *gorm.DB) (err error) {
 	err = tx.Exec(`
 		UPDATE themes_or_levels
-		SET total_unit = (
-			SELECT COUNT(*) FROM units WHERE themes_or_level_id = ? AND deleted_at IS NULL
-		)
+		SET total_unit = total_unit + 1
 		WHERE id = ?
-	`, u.ThemesOrLevelID, u.ThemesOrLevelID).Error
+	`, u.ThemesOrLevelID).Error
 	return
 }
 
-// Hook AfterDelete untuk memperbarui total_unit di ThemesOrLevelModel setelah delete
+// ✅ AfterDelete Hook untuk UnitModel
 func (u *UnitModel) AfterDelete(tx *gorm.DB) (err error) {
 	err = tx.Exec(`
 		UPDATE themes_or_levels
-		SET total_unit = (
-			SELECT COUNT(*) FROM units WHERE themes_or_level_id = ? AND deleted_at IS NULL
-		)
+		SET total_unit = GREATEST(total_unit - 1, 0)
 		WHERE id = ?
-	`, u.ThemesOrLevelID, u.ThemesOrLevelID).Error
+	`, u.ThemesOrLevelID).Error
 	return
 }
