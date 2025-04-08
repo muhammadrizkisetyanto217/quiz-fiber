@@ -7,9 +7,9 @@ import (
 	"quiz-fiber/internals/features/quizzes/quizzes/model"
 	"quiz-fiber/internals/features/quizzes/quizzes/services"
 
+	categoryModel "quiz-fiber/internals/features/category/subcategory/model"
 	themesOrLevelsModel "quiz-fiber/internals/features/category/themes_or_levels/model"
 	unitModel "quiz-fiber/internals/features/category/units/model"
-	categoryModel "quiz-fiber/internals/features/category/subcategory/model"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -87,11 +87,11 @@ func (uc *UserQuizController) CreateOrUpdateUserQuiz(c *fiber.Ctx) error {
 
 	// Update progres ke section dan unit
 	_ = services.UpdateUserSectionIfQuizCompleted(uc.DB, input.UserID, int(section.ID), int(input.QuizID))
-	_ = services.UpdateUserUnitIfSectionCompleted(uc.DB, input.UserID, int(section.UnitID), int(section.ID))
+	_ = services.UpdateUserUnitIfSectionCompleted(uc.DB, input.UserID, section.UnitID, section.ID)
+
 	_ = services.UpdateUserThemesOrLevelsIfUnitCompleted(uc.DB, input.UserID, int(unit.ID), int(unit.ThemesOrLevelID))
 	_ = services.UpdateUserSubcategoryIfThemeCompleted(uc.DB, input.UserID, int(theme.ID), int(theme.SubcategoriesID))
 	_ = services.UpdateUserCategoryIfSubcategoryCompleted(uc.DB, input.UserID, int(subcategory.ID), int(subcategory.CategoriesID))
-
 
 	return c.JSON(fiber.Map{
 		"message": "User quiz progress saved and progress updated",

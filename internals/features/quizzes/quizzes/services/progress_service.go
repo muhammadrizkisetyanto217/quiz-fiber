@@ -58,7 +58,7 @@ func UpdateUserSectionIfQuizCompleted(db *gorm.DB, userID uuid.UUID, sectionID i
 	return db.Save(&userSection).Error
 }
 
-func UpdateUserUnitIfSectionCompleted(db *gorm.DB, userID uuid.UUID, unitID int, sectionID int) error {
+func UpdateUserUnitIfSectionCompleted(db *gorm.DB, userID uuid.UUID, unitID uint, sectionID uint) error {
 	log.Println("[SERVICE] UpdateUserUnitIfSectionCompleted - userID:", userID, "unitID:", unitID, "sectionID:", sectionID)
 
 	// Ambil semua section dari unit (untuk TotalSectionQuizzes)

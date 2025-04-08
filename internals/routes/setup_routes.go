@@ -14,6 +14,7 @@ import (
 	SectionQuizzesRoutes "quiz-fiber/internals/features/quizzes/quizzes/route"
 	questionRoute "quiz-fiber/internals/features/quizzes/question/route"
 	readingRoute "quiz-fiber/internals/features/quizzes/reading/route"
+	evaluationRoute "quiz-fiber/internals/features/quizzes/evaluation/route"
 
 	// Utils
 	tooltipRoute "quiz-fiber/internals/features/utils/tooltip/route"
@@ -43,6 +44,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	SectionQuizzesRoutes.SectionQuizzesRoutes(app, db)
 	questionRoute.QuestionRoutes(app, db)
 	readingRoute.ReadingRoutes(app, db)
+	evaluationRoute.EvaluationRoute(app, db)
+
 	
 
 	
