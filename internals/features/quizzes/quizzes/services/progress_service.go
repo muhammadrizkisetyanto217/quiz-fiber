@@ -4,11 +4,11 @@ import (
 	"errors"
 	"log"
 
+	userCategoryModel "quiz-fiber/internals/features/category/category/model"
+	userSubcategoryModel "quiz-fiber/internals/features/category/subcategory/model"
+	userThemesOrLevelsModel "quiz-fiber/internals/features/category/themes_or_levels/model"
 	userUnitModel "quiz-fiber/internals/features/category/units/model"
 	quizzesModel "quiz-fiber/internals/features/quizzes/quizzes/model"
-	userThemesOrLevelsModel "quiz-fiber/internals/features/category/themes_or_levels/model"
-	userSubcategoryModel "quiz-fiber/internals/features/category/subcategory/model"
-	userCategoryModel "quiz-fiber/internals/features/category/category/model"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -118,6 +118,67 @@ func UpdateUserUnitIfSectionCompleted(db *gorm.DB, userID uuid.UUID, unitID uint
 	return db.Save(&userUnit).Error
 }
 
+// func UpdateUserThemesOrLevelsIfUnitCompleted(db *gorm.DB, userID uuid.UUID, unitID int, themesOrLevelID int) error {
+// 	log.Println("[SERVICE] UpdateUserThemesOrLevelsIfUnitCompleted - userID:", userID, "unitID:", unitID, "themesOrLevelID:", themesOrLevelID)
+
+// 	// Ambil semua unit dari themes/level
+// 	var allUnits []userUnitModel.UnitModel
+// 	if err := db.Where("themes_or_level_id = ? AND deleted_at IS NULL", themesOrLevelID).Find(&allUnits).Error; err != nil {
+// 		log.Println("[ERROR] Failed to fetch units for theme:", err)
+// 		return err
+// 	}
+// 	totalUnitIDs := pq.Int64Array{}
+// 	for _, unit := range allUnits {
+// 		totalUnitIDs = append(totalUnitIDs, int64(unit.ID))
+// 	}
+
+// 	// Ambil user_unit untuk unit ini
+// 	var userUnit userUnitModel.UserUnitModel
+// 	if err := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit).Error; err != nil {
+// 		log.Println("[SERVICE] UserUnit belum ada, skip update theme progress")
+// 		return nil
+// 	}
+
+// 	unitCompleted := len(userUnit.CompleteSectionQuizzes) == len(userUnit.TotalSectionQuizzes)
+
+// 	// Cek apakah sudah ada
+// 	var userTheme userThemesOrLevelsModel.UserThemesOrLevelsModel
+// 	err := db.Where("user_id = ? AND themes_or_levels_id = ?", userID, themesOrLevelID).First(&userTheme).Error
+// 	if errors.Is(err, gorm.ErrRecordNotFound) {
+// 		userTheme = userThemesOrLevelsModel.UserThemesOrLevelsModel{
+// 			UserID:           userID,
+// 			ThemesOrLevelsID: themesOrLevelID,
+// 			CompleteUnit:     pq.Int64Array{},
+// 			TotalUnit:        totalUnitIDs,
+// 		}
+
+// 		if unitCompleted {
+// 			userTheme.CompleteUnit = pq.Int64Array{int64(unitID)}
+// 		}
+
+// 		log.Println("[SERVICE] Creating new UserThemesOrLevelsModel")
+// 		return db.Create(&userTheme).Error
+// 	}
+
+// 	// Update total unit selalu
+// 	userTheme.TotalUnit = totalUnitIDs
+
+// 	// Tambahkan unit jika lengkap dan belum tercatat
+// 	if unitCompleted {
+// 		for _, id := range userTheme.CompleteUnit {
+// 			if id == int64(unitID) {
+// 				log.Println("[SERVICE] Unit already recorded in CompleteUnit")
+// 				return db.Save(&userTheme).Error
+// 			}
+// 		}
+// 		userTheme.CompleteUnit = append(userTheme.CompleteUnit, int64(unitID))
+// 	}
+
+// 	log.Println("[SERVICE] Updating existing UserThemesOrLevelsModel")
+// 	return db.Save(&userTheme).Error
+// }
+
+// ✅ Final: UpdateUserThemesOrLevelsIfUnitCompleted
 func UpdateUserThemesOrLevelsIfUnitCompleted(db *gorm.DB, userID uuid.UUID, unitID int, themesOrLevelID int) error {
 	log.Println("[SERVICE] UpdateUserThemesOrLevelsIfUnitCompleted - userID:", userID, "unitID:", unitID, "themesOrLevelID:", themesOrLevelID)
 
@@ -139,8 +200,6 @@ func UpdateUserThemesOrLevelsIfUnitCompleted(db *gorm.DB, userID uuid.UUID, unit
 		return nil
 	}
 
-	unitCompleted := len(userUnit.CompleteSectionQuizzes) == len(userUnit.TotalSectionQuizzes)
-
 	// Cek apakah sudah ada
 	var userTheme userThemesOrLevelsModel.UserThemesOrLevelsModel
 	err := db.Where("user_id = ? AND themes_or_levels_id = ?", userID, themesOrLevelID).First(&userTheme).Error
@@ -148,14 +207,9 @@ func UpdateUserThemesOrLevelsIfUnitCompleted(db *gorm.DB, userID uuid.UUID, unit
 		userTheme = userThemesOrLevelsModel.UserThemesOrLevelsModel{
 			UserID:           userID,
 			ThemesOrLevelsID: themesOrLevelID,
-			CompleteUnit:     pq.Int64Array{},
+			CompleteUnit:     pq.Int64Array{int64(unitID)},
 			TotalUnit:        totalUnitIDs,
 		}
-
-		if unitCompleted {
-			userTheme.CompleteUnit = pq.Int64Array{int64(unitID)}
-		}
-
 		log.Println("[SERVICE] Creating new UserThemesOrLevelsModel")
 		return db.Create(&userTheme).Error
 	}
@@ -163,21 +217,21 @@ func UpdateUserThemesOrLevelsIfUnitCompleted(db *gorm.DB, userID uuid.UUID, unit
 	// Update total unit selalu
 	userTheme.TotalUnit = totalUnitIDs
 
-	// Tambahkan unit jika lengkap dan belum tercatat
-	if unitCompleted {
-		for _, id := range userTheme.CompleteUnit {
-			if id == int64(unitID) {
-				log.Println("[SERVICE] Unit already recorded in CompleteUnit")
-				return db.Save(&userTheme).Error
-			}
+	// Tambahkan unitID ke CompleteUnit jika belum ada
+	alreadyAdded := false
+	for _, id := range userTheme.CompleteUnit {
+		if id == int64(unitID) {
+			alreadyAdded = true
+			break
 		}
+	}
+	if !alreadyAdded {
 		userTheme.CompleteUnit = append(userTheme.CompleteUnit, int64(unitID))
 	}
 
 	log.Println("[SERVICE] Updating existing UserThemesOrLevelsModel")
 	return db.Save(&userTheme).Error
 }
-
 
 func UpdateUserSubcategoryIfThemeCompleted(db *gorm.DB, userID uuid.UUID, themesOrLevelsID int, subcategoryID int) error {
 	log.Println("[SERVICE] UpdateUserSubcategoryIfThemeCompleted - userID:", userID, "themesOrLevelsID:", themesOrLevelsID, "subcategoryID:", subcategoryID)
@@ -241,7 +295,6 @@ func UpdateUserSubcategoryIfThemeCompleted(db *gorm.DB, userID uuid.UUID, themes
 	log.Println("[SERVICE] Updating existing UserSubcategoryModel")
 	return db.Save(&userSub).Error
 }
-
 
 func UpdateUserCategoryIfSubcategoryCompleted(db *gorm.DB, userID uuid.UUID, subcategoryID int, categoryID int) error {
 	log.Println("[SERVICE] UpdateUserCategoryIfSubcategoryCompleted - userID:", userID, "subcategoryID:", subcategoryID, "categoryID:", categoryID)

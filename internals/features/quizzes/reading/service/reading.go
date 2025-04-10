@@ -13,21 +13,7 @@ import (
 // === BAGIAN UNTUK USER READING ===
 //////////////////////////////////////////////////////////
 
-func UpdateUserUnitFromReading(db *gorm.DB, userID uuid.UUID, readingID uint) error {
-	var unitID uint
-
-	err := db.Table("readings").
-		Select("unit_id").
-		Where("id = ?", readingID).
-		Scan(&unitID).Error
-
-	if err != nil {
-		return err
-	}
-	if unitID == 0 {
-		return errors.New("unit_id not found for reading_id")
-	}
-
+func UpdateUserUnitFromReading(db *gorm.DB, userID uuid.UUID, unitID uint) error {
 	var userUnit userUnitModel.UserUnitModel
 	result := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit)
 
@@ -45,20 +31,10 @@ func UpdateUserUnitFromReading(db *gorm.DB, userID uuid.UUID, readingID uint) er
 	return db.Model(&userUnit).Update("is_reading", true).Error
 }
 
-func CheckAndUnsetUserUnitReadingStatus(db *gorm.DB, userID uuid.UUID, readingID uint) error {
-	var unitID uint
-	err := db.Table("readings").
-		Select("unit_id").
-		Where("id = ?", readingID).
-		Scan(&unitID).Error
-	if err != nil || unitID == 0 {
-		return err
-	}
-
+func CheckAndUnsetUserUnitReadingStatus(db *gorm.DB, userID uuid.UUID, unitID uint) error {
 	var count int64
-	err = db.Table("user_readings").
-		Joins("JOIN readings ON readings.id = user_readings.reading_id").
-		Where("user_readings.user_id = ? AND readings.unit_id = ?", userID, unitID).
+	err := db.Table("user_readings").
+		Where("user_id = ? AND unit_id = ?", userID, unitID).
 		Count(&count).Error
 	if err != nil {
 		return err

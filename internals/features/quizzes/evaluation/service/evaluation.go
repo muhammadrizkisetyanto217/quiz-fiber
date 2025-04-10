@@ -8,17 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func UpdateUserUnitFromEvaluation(db *gorm.DB, userID uuid.UUID , evaluationID uint) error {
-	var unitID uint
-
-	err := db.Table("evaluations").
-		Select("unit_id").
-		Where("id = ?", evaluationID).
-		Scan(&unitID).Error
-	if err != nil || unitID == 0 {
-		return err
-	}
-
+func UpdateUserUnitFromEvaluation(db *gorm.DB, userID uuid.UUID, unitID uint) error {
 	var userUnit userUnitModel.UserUnitModel
 	result := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit)
 
@@ -36,20 +26,10 @@ func UpdateUserUnitFromEvaluation(db *gorm.DB, userID uuid.UUID , evaluationID u
 	return db.Model(&userUnit).Update("is_evaluation", true).Error
 }
 
-func CheckAndUnsetEvaluationStatus(db *gorm.DB, userID uuid.UUID, evaluationID uint) error {
-	var unitID uint
-	err := db.Table("evaluations").
-		Select("unit_id").
-		Where("id = ?", evaluationID).
-		Scan(&unitID).Error
-	if err != nil || unitID == 0 {
-		return err
-	}
-
+func CheckAndUnsetEvaluationStatus(db *gorm.DB, userID uuid.UUID, unitID uint) error {
 	var count int64
-	err = db.Table("user_evaluations").
-		Joins("JOIN evaluations ON evaluations.id = user_evaluations.evaluation_id").
-		Where("user_evaluations.user_id = ? AND evaluations.unit_id = ?", userID, unitID).
+	err := db.Table("user_evaluations").
+		Where("user_id = ? AND unit_id = ?", userID, unitID).
 		Count(&count).Error
 	if err != nil {
 		return err
