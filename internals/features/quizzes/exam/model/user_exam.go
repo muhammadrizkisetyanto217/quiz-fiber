@@ -11,8 +11,9 @@ import (
 
 type UserExamModel struct {
 	ID              uint           `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID          uuid.UUID      `gorm:"not null" json:"user_id"`
-	ExamID          uint           `gorm:"not null;column:exam_id" json:"exam_id"`
+	UserID          uuid.UUID      `gorm:"not null;index:idx_user_exams_user_id_exam_id,priority:1;index:idx_user_exams_user_id_unit_id,priority:1" json:"user_id"`
+	ExamID          uint           `gorm:"not null;index:idx_user_exams_user_id_exam_id,priority:2" json:"exam_id"`
+	UnitID          uint           `gorm:"not null;index:idx_user_exams_user_id_unit_id,priority:2" json:"unit_id"`
 	Attempt         int            `gorm:"default:1;not null" json:"attempt"`
 	PercentageGrade int            `gorm:"default:0;not null" json:"percentage_grade"`
 	TimeDuration    int            `gorm:"default:0;not null" json:"time_duration"`
@@ -24,7 +25,6 @@ type UserExamModel struct {
 func (UserExamModel) TableName() string {
 	return "user_exams"
 }
-
 func (u *UserExamModel) AfterCreate(tx *gorm.DB) error {
 	return service.UpdateUserUnitFromExam(tx, u.UserID, u.ExamID, u.PercentageGrade)
 }

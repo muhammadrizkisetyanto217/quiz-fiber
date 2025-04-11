@@ -1,9 +1,10 @@
 package controller
 
-
 import (
-	
+	"log"
 	userEvaluationModel "quiz-fiber/internals/features/quizzes/evaluation/model"
+	"quiz-fiber/internals/features/quizzes/evaluation/service"
+
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -16,19 +17,46 @@ func NewUserEvaluationController(db *gorm.DB) *UserEvaluationController {
 	return &UserEvaluationController{DB: db}
 }
 
-
 // POST /api/user_evaluations
 func (ctrl *UserEvaluationController) Create(c *fiber.Ctx) error {
 	var input userEvaluationModel.UserEvaluationModel
+	body := c.Body()
+	log.Println("[DEBUG] Raw request body:", string(body))
+
+	// ✅ Parse body
 	if err := c.BodyParser(&input); err != nil {
+		log.Println("[ERROR] Failed to parse body:", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
+	// ✅ Hitung attempt ke-n
+	var latestAttempt int
+	err := ctrl.DB.Table("user_evaluations").
+		Select("COALESCE(MAX(attempt), 0)").
+		Where("user_id = ? AND evaluation_id = ?", input.UserID, input.EvaluationID).
+		Scan(&latestAttempt).Error
+	if err != nil {
+		log.Println("[ERROR] Failed to count latest attempt:", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+	}
+	input.Attempt = latestAttempt + 1
+
+	// ✅ Simpan ke DB
 	if err := ctrl.DB.Create(&input).Error; err != nil {
+		log.Println("[ERROR] Failed to create user evaluation:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user evaluation"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(input)
+	// ✅ Update ke user_unit
+	if err := service.UpdateUserUnitFromEvaluation(ctrl.DB, input.UserID, input.UnitID); err != nil {
+		log.Println("[ERROR] Failed to update user unit from evaluation:", err)
+	}
+
+	log.Println("[SUCCESS] User evaluation created successfully")
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "User evaluation created successfully",
+		"data":    input,
+	})
 }
 
 // GET /api/user_evaluations/:user_id

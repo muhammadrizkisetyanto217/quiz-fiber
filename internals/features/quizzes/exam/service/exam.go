@@ -116,7 +116,7 @@ func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade in
 		Count(&totalSections).Error
 
 	_ = db.Table("user_section_quizzes").
-		Joins("JOIN section_quizzes ON user_section_quizzes.section_quiz_id = section_quizzes.id").
+		Joins("JOIN section_quizzes ON user_section_quizzes.section_quizzes_id = section_quizzes.id").
 		Where("user_section_quizzes.user_id = ? AND section_quizzes.unit_id = ?", userID, unitID).
 		Count(&completedSections).Error
 

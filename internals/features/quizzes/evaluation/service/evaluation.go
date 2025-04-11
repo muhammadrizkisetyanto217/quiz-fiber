@@ -12,19 +12,23 @@ func UpdateUserUnitFromEvaluation(db *gorm.DB, userID uuid.UUID, unitID uint) er
 	var userUnit userUnitModel.UserUnitModel
 	result := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit)
 
+	// Jika belum ada, buat dengan AttemptEvaluation = 1
 	if result.Error != nil && errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		userUnit = userUnitModel.UserUnitModel{
-			UserID:       userID,
-			UnitID:       unitID,
-			IsEvaluation: true,
+			UserID:            userID,
+			UnitID:            unitID,
+			AttemptEvaluation: 1,
 		}
 		return db.Create(&userUnit).Error
 	} else if result.Error != nil {
 		return result.Error
 	}
 
-	return db.Model(&userUnit).Update("is_evaluation", true).Error
+	// Jika sudah ada, tambah AttemptEvaluation +1
+	return db.Model(&userUnit).
+		UpdateColumn("attempt_evaluation", gorm.Expr("attempt_evaluation + ?", 1)).Error
 }
+
 
 func CheckAndUnsetEvaluationStatus(db *gorm.DB, userID uuid.UUID, unitID uint) error {
 	var count int64
@@ -38,8 +42,9 @@ func CheckAndUnsetEvaluationStatus(db *gorm.DB, userID uuid.UUID, unitID uint) e
 	if count == 0 {
 		return db.Model(&userUnitModel.UserUnitModel{}).
 			Where("user_id = ? AND unit_id = ?", userID, unitID).
-			Update("is_evaluation", false).Error
+			Update("attempt_evaluation", 0).Error
 	}
 
 	return nil
 }
+

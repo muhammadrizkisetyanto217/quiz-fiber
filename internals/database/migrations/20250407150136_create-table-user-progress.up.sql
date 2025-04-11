@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS user_unit (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
     unit_id INTEGER NOT NULL,
-    is_reading BOOLEAN NOT NULL DEFAULT FALSE,
-    is_evaluation BOOLEAN NOT NULL DEFAULT FALSE,
+    attempt_reading INTEGER DEFAULT 0 NOT NULL,
+    attempt_evaluation INTEGER DEFAULT 0 NOT NULL,
     complete_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
     total_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
     grade_exam INTEGER NOT NULL DEFAULT 0,
@@ -41,8 +41,12 @@ CREATE TABLE IF NOT EXISTS user_unit (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Index untuk mempercepat pencarian berdasarkan user_id dan unit_id
+CREATE INDEX IF NOT EXISTS idx_user_unit_user_id_unit_id ON user_unit (user_id, unit_id);
+
 CREATE INDEX IF NOT EXISTS idx_user_unit_user_id ON user_unit (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_unit_unit_id ON user_unit (unit_id);
+ANALYZE user_unit;
 
 CREATE TABLE IF NOT EXISTS user_themes_or_levels (
     id SERIAL PRIMARY KEY,
