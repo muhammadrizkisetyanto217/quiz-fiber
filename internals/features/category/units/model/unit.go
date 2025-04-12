@@ -1,11 +1,13 @@
 package model
 
 import (
+	"log"
 	"time"
 
 	"quiz-fiber/internals/features/quizzes/quizzes/model"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -18,7 +20,8 @@ type UnitModel struct {
 	DescriptionOverview string         `gorm:"type:text;not null" json:"description_overview"`
 	ImageURL            string         `gorm:"type:varchar(100)" json:"image_url"`
 	UpdateNews          datatypes.JSON `gorm:"type:jsonb" json:"update_news"`
-	TotalSectionQuizzes int            `gorm:"default:0" json:"total_section_quizzes"` // ✅ Kolom tambahan
+
+	TotalSectionQuizzes pq.Int64Array  `gorm:"type:integer[];default:'{}'" json:"total_section_quizzes"`
 	CreatedAt           time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt           time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at"`
@@ -32,23 +35,30 @@ func (UnitModel) TableName() string {
 	return "units"
 }
 
-// Hook AfterSave untuk memperbarui total_unit di ThemesOrLevelModel setelah insert/update
-// ✅ AfterCreate Hook untuk UnitModel
-func (u *UnitModel) AfterCreate(tx *gorm.DB) (err error) {
-	err = tx.Exec(`
-		UPDATE themes_or_levels
-		SET total_unit = total_unit + 1
-		WHERE id = ?
-	`, u.ThemesOrLevelID).Error
-	return
+func (u *UnitModel) AfterSave(tx *gorm.DB) error {
+	return SyncTotalUnits(tx, u.ThemesOrLevelID)
 }
 
-// ✅ AfterDelete Hook untuk UnitModel
-func (u *UnitModel) AfterDelete(tx *gorm.DB) (err error) {
-	err = tx.Exec(`
+func (u *UnitModel) AfterDelete(tx *gorm.DB) error {
+	return SyncTotalUnits(tx, u.ThemesOrLevelID)
+}
+
+func SyncTotalUnits(db *gorm.DB, themesOrLevelID uint) error {
+	log.Println("[SERVICE] SyncTotalUnits - themesOrLevelID:", themesOrLevelID)
+
+	err := db.Exec(`
 		UPDATE themes_or_levels
-		SET total_unit = GREATEST(total_unit - 1, 0)
+		SET total_unit = (
+			SELECT ARRAY_AGG(id ORDER BY id)
+			FROM units
+			WHERE themes_or_level_id = ? AND deleted_at IS NULL
+		)
 		WHERE id = ?
-	`, u.ThemesOrLevelID).Error
-	return
+	`, themesOrLevelID, themesOrLevelID).Error
+
+	if err != nil {
+		log.Println("[ERROR] Failed to sync total_unit:", err)
+	}
+
+	return err
 }

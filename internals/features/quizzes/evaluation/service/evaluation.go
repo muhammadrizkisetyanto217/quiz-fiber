@@ -47,4 +47,3 @@ func CheckAndUnsetEvaluationStatus(db *gorm.DB, userID uuid.UUID, unitID uint) e
 
 	return nil
 }
-

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS difficulties (
     status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
     description_short VARCHAR(200),
     description_long VARCHAR(3000),
-    total_categories INT,
+    total_categories INTEGER[] NOT NULL DEFAULT '{}',
     image_url VARCHAR(100),
     update_news JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS categories (
     status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
     description_short VARCHAR(100),
     description_long VARCHAR(2000),
-    total_subcategories INT,
+    total_subcategories INTEGER[] NOT NULL DEFAULT '{}',
     image_url VARCHAR(100),
     update_news JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS subcategories (
     name VARCHAR(255),
     status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
     description_long VARCHAR(2000),
-    total_themes_or_levels INT,
+    total_themes_or_levels INTEGER[] NOT NULL DEFAULT '{}',
     image_url VARCHAR(100),
     update_news JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS themes_or_levels (
     status VARCHAR(10) CHECK (status IN ('active', 'pending', 'archived')) DEFAULT 'pending',
     description_short VARCHAR(100),
     description_long VARCHAR(2000),
-    total_unit INT,
+    total_unit INTEGER[] NOT NULL DEFAULT '{}',
     image_url VARCHAR(100),
     update_news JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS units (
     description_overview TEXT NOT NULL,
     image_url VARCHAR(100),
     update_news JSONB,
-    total_section_quizzes INT DEFAULT 0, -- ✅ Tambahan kolom ini
+    total_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
@@ -131,6 +131,3 @@ CREATE TABLE IF NOT EXISTS units_news (
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
-
-
-

@@ -89,9 +89,9 @@ func (uc *UserQuizController) CreateOrUpdateUserQuiz(c *fiber.Ctx) error {
 	_ = services.UpdateUserSectionIfQuizCompleted(uc.DB, input.UserID, int(section.ID), int(input.QuizID))
 	_ = services.UpdateUserUnitIfSectionCompleted(uc.DB, input.UserID, section.UnitID, section.ID)
 
-	_ = services.UpdateUserThemesOrLevelsIfUnitCompleted(uc.DB, input.UserID, int(unit.ID), int(unit.ThemesOrLevelID))
-	_ = services.UpdateUserSubcategoryIfThemeCompleted(uc.DB, input.UserID, int(theme.ID), int(theme.SubcategoriesID))
-	_ = services.UpdateUserCategoryIfSubcategoryCompleted(uc.DB, input.UserID, int(subcategory.ID), int(subcategory.CategoriesID))
+	// _ = services.UpdateUserThemesOrLevelsIfUnitCompleted(uc.DB, input.UserID, int(unit.ID), int(unit.ThemesOrLevelID))
+	// _ = services.UpdateUserSubcategoryIfThemeCompleted(uc.DB, input.UserID, int(theme.ID), int(theme.SubcategoriesID))
+	// _ = services.UpdateUserCategoryIfSubcategoryCompleted(uc.DB, input.UserID, int(subcategory.ID), int(subcategory.CategoriesID))
 
 	return c.JSON(fiber.Map{
 		"message": "User quiz progress saved and progress updated",

@@ -1,8 +1,10 @@
 package model
 
 import (
+	"log"
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -13,7 +15,7 @@ type CategoryModel struct {
 	Status             string         `json:"status" gorm:"type:varchar(10);default:'pending';check:status IN ('active', 'pending', 'archived')"`
 	DescriptionShort   string         `json:"description_short" gorm:"size:100"`
 	DescriptionLong    string         `json:"description_long" gorm:"size:2000"`
-	TotalSubcategories int            `json:"total_subcategories"`
+	TotalSubcategories pq.Int64Array  `json:"total_subcategories" gorm:"type:integer[];default:'{}'"`
 	ImageURL           string         `json:"image_url" gorm:"size:100"`
 	UpdateNews         datatypes.JSON `json:"update_news"`
 	DifficultyID       uint           `json:"difficulty_id"`
@@ -26,26 +28,29 @@ func (CategoryModel) TableName() string {
 	return "categories"
 }
 
-// Hook AfterSave untuk memperbarui total_categories di DifficultyModel setelah insert/update kategori
 func (c *CategoryModel) AfterSave(tx *gorm.DB) (err error) {
-	err = tx.Exec(`
-		UPDATE difficulties
-		SET total_categories = (
-			SELECT COUNT(*) FROM categories WHERE difficulty_id = ?
-		)
-		WHERE id = ?
-	`, c.DifficultyID, c.DifficultyID).Error
-	return
+	return SyncTotalCategories(tx, c.DifficultyID)
 }
 
-// Hook AfterDelete untuk memperbarui total_categories di DifficultyModel setelah delete kategori
 func (c *CategoryModel) AfterDelete(tx *gorm.DB) (err error) {
-	err = tx.Exec(`
+	return SyncTotalCategories(tx, c.DifficultyID)
+}
+
+func SyncTotalCategories(db *gorm.DB, difficultyID uint) error {
+	log.Println("[SERVICE] SyncTotalCategories - difficultyID:", difficultyID)
+
+	err := db.Exec(`
 		UPDATE difficulties
 		SET total_categories = (
-			SELECT COUNT(*) FROM categories WHERE difficulty_id = ?
+			SELECT ARRAY_AGG(id ORDER BY id)
+			FROM categories
+			WHERE difficulty_id = ? AND deleted_at IS NULL
 		)
 		WHERE id = ?
-	`, c.DifficultyID, c.DifficultyID).Error
-	return
+	`, difficultyID, difficultyID).Error
+
+	if err != nil {
+		log.Println("[ERROR] Failed to sync total_categories:", err)
+	}
+	return err
 }

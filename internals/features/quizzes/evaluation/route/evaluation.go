@@ -13,7 +13,6 @@ func EvaluationRoute(app *fiber.App, db *gorm.DB) {
 	// 🔒 Semua API reading dilindungi oleh Auth Middleware
 	api := app.Group("/api", userController.AuthMiddleware(db))
 
-
 	// 🏆 Evaluation Routes
 	evaluationCtrl := evaluationController.NewEvaluationController(db)
 	evaluationRoutes := api.Group("/evaluations")
@@ -23,7 +22,6 @@ func EvaluationRoute(app *fiber.App, db *gorm.DB) {
 	evaluationRoutes.Post("/", evaluationCtrl.CreateEvaluation)
 	evaluationRoutes.Put("/:id", evaluationCtrl.UpdateEvaluation)
 	evaluationRoutes.Delete("/:id", evaluationCtrl.DeleteEvaluation)
-
 
 	// 🧠 User Evaluation Routes
 	userEvaluationController := evaluationController.NewUserEvaluationController(db)

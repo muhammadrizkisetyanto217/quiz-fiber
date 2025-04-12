@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +12,7 @@ type ExamModel struct {
 	ID            uint           `gorm:"primaryKey" json:"id"`
 	NameExams     string         `gorm:"size:50;not null" json:"name_exams" validate:"required,max=50"`
 	Status        string         `gorm:"type:varchar(10);default:'pending';check:status IN ('active', 'pending', 'archived')" json:"status" validate:"required,oneof=active pending archived"`
-	TotalQuestion *int           `json:"total_question" validate:"omitempty,gte=0"`
+	TotalQuestion pq.Int64Array  `gorm:"type:integer[];default:'{}'" json:"total_question"`
 	IconURL       *string        `gorm:"size:100" json:"icon_url,omitempty" validate:"omitempty,url"`
 	CreatedAt     time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time      `gorm:"autoUpdateTime" json:"updated_at"`

@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -40,4 +41,40 @@ func (q QuestionModel) MarshalJSON() ([]byte, error) {
 		TooltipsID: []int64(q.TooltipsID),
 		Alias:      (*Alias)(&q),
 	})
+}
+
+func (q *QuestionModel) AfterSave(tx *gorm.DB) error {
+	return SyncTotalQuestions(tx, int(q.SourceTypeID), int(q.SourceID))
+}
+
+func (q *QuestionModel) AfterDelete(tx *gorm.DB) error {
+	return SyncTotalQuestions(tx, int(q.SourceTypeID), int(q.SourceID))
+}
+
+// ✅ Fungsi dinamis untuk update total_question ke quizzes/evaluations/exams
+func SyncTotalQuestions(db *gorm.DB, sourceTypeID int, sourceID int) error {
+	log.Printf("[SERVICE] SyncTotalQuestions - source_type_id: %d, source_id: %d\n", sourceTypeID, sourceID)
+
+	var tableName string
+	switch sourceTypeID {
+	case 1:
+		tableName = "quizzes"
+	case 2:
+		tableName = "evaluations"
+	case 3:
+		tableName = "exams"
+	default:
+		log.Println("[WARNING] Unknown source_type_id:", sourceTypeID)
+		return nil
+	}
+
+	return db.Exec(`
+		UPDATE `+tableName+`
+		SET total_question = (
+			SELECT ARRAY_AGG(id ORDER BY id)
+			FROM questions
+			WHERE source_type_id = ? AND source_id = ? AND deleted_at IS NULL
+		)
+		WHERE id = ?
+	`, sourceTypeID, sourceID, sourceID).Error
 }

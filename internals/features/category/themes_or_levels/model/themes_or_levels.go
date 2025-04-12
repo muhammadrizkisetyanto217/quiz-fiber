@@ -1,8 +1,10 @@
 package model
 
 import (
+	"log"
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -13,7 +15,7 @@ type ThemesOrLevelsModel struct {
 	Status           string         `gorm:"type:varchar(10);default:'pending';check:status IN ('active','pending','archived')" json:"status"`
 	DescriptionShort string         `gorm:"type:varchar(100)" json:"description_short"`
 	DescriptionLong  string         `gorm:"type:varchar(2000)" json:"description_long"`
-	TotalUnit        int            `json:"total_unit"`
+	TotalUnit        pq.Int64Array  `gorm:"type:integer[];default:'{}'" json:"total_unit"` 
 	ImageURL         string         `gorm:"type:varchar(100)" json:"image_url"`
 	UpdateNews       datatypes.JSON `gorm:"type:jsonb" json:"update_news"`
 	CreatedAt        time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
@@ -26,26 +28,31 @@ func (ThemesOrLevelsModel) TableName() string {
 	return "themes_or_levels"
 }
 
-// Hook AfterSave untuk memperbarui total_themes_or_levels di SubcategoryModel setelah insert/update
+
 func (t *ThemesOrLevelsModel) AfterSave(tx *gorm.DB) (err error) {
-	err = tx.Exec(`
-		UPDATE subcategories
-		SET total_themes_or_levels = (
-			SELECT COUNT(*) FROM themes_or_levels WHERE subcategories_id = ?
-		)
-		WHERE id = ?
-	`, t.SubcategoriesID, t.SubcategoriesID).Error
-	return
+	return SyncTotalThemesOrLevels(tx, t.SubcategoriesID)
 }
 
-// Hook AfterDelete untuk memperbarui total_themes_or_levels di SubcategoryModel setelah delete
 func (t *ThemesOrLevelsModel) AfterDelete(tx *gorm.DB) (err error) {
-	err = tx.Exec(`
+	return SyncTotalThemesOrLevels(tx, t.SubcategoriesID)
+}
+
+func SyncTotalThemesOrLevels(db *gorm.DB, subcategoryID int) error {
+	log.Println("[SERVICE] SyncTotalThemesOrLevels - subcategoryID:", subcategoryID)
+
+	err := db.Exec(`
 		UPDATE subcategories
 		SET total_themes_or_levels = (
-			SELECT COUNT(*) FROM themes_or_levels WHERE subcategories_id = ?
+			SELECT ARRAY_AGG(id)
+			FROM themes_or_levels
+			WHERE subcategories_id = ? AND deleted_at IS NULL
 		)
 		WHERE id = ?
-	`, t.SubcategoriesID, t.SubcategoriesID).Error
-	return
+	`, subcategoryID, subcategoryID).Error
+
+	if err != nil {
+		log.Println("[ERROR] Failed to sync total_themes_or_levels:", err)
+	}
+	return err
 }
+
