@@ -91,7 +91,7 @@ func (ec *ExamController) CreateExam(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{
 		"message": "Exam created successfully",
 		"data":    exam,
-	})
+	}) 
 }
 
 // PUT update exam

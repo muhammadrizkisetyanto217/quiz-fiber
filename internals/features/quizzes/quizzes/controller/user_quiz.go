@@ -7,8 +7,6 @@ import (
 	"quiz-fiber/internals/features/quizzes/quizzes/model"
 	"quiz-fiber/internals/features/quizzes/quizzes/services"
 
-	categoryModel "quiz-fiber/internals/features/category/subcategory/model"
-	themesOrLevelsModel "quiz-fiber/internals/features/category/themes_or_levels/model"
 	unitModel "quiz-fiber/internals/features/category/units/model"
 
 	"github.com/gofiber/fiber/v2"
@@ -42,6 +40,9 @@ func (uc *UserQuizController) CreateOrUpdateUserQuiz(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create user quiz"})
 		}
 		log.Printf("[SUCCESS] Created user_quiz for user_id=%s quiz_id=%d\n", input.UserID.String(), input.QuizID)
+	} else if err != nil {
+		log.Println("[ERROR] Failed to query user quiz:", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch user quiz"})
 	} else {
 		input.ID = existing.ID
 		if err := uc.DB.Save(&input).Error; err != nil {
@@ -64,34 +65,16 @@ func (uc *UserQuizController) CreateOrUpdateUserQuiz(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Section not found"})
 	}
 
-	// Dapatkan unit untuk themes_or_level_id
+	// Dapatkan unit
 	var unit unitModel.UnitModel
 	if err := uc.DB.First(&unit, section.UnitID).Error; err != nil {
 		log.Println("[ERROR] Failed to fetch UnitModel:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch related unit"})
 	}
 
-	// Ambil themes_or_level untuk ambil subcategory_id
-	var theme themesOrLevelsModel.ThemesOrLevelsModel
-	if err := uc.DB.First(&theme, unit.ThemesOrLevelID).Error; err != nil {
-		log.Println("[ERROR] Failed to fetch ThemesOrLevelsModel:", err)
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch related theme"})
-	}
-
-	// Ambil subcategory untuk ambil category_id
-	var subcategory categoryModel.SubcategoryModel
-	if err := uc.DB.First(&subcategory, theme.SubcategoriesID).Error; err != nil {
-		log.Println("[ERROR] Failed to fetch SubcategoryModel:", err)
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch related subcategory"})
-	}
-
 	// Update progres ke section dan unit
-	_ = services.UpdateUserSectionIfQuizCompleted(uc.DB, input.UserID, int(section.ID), int(input.QuizID))
+	_ = services.UpdateUserSectionIfQuizCompleted(uc.DB, input.UserID, section.ID, input.QuizID)
 	_ = services.UpdateUserUnitIfSectionCompleted(uc.DB, input.UserID, section.UnitID, section.ID)
-
-	// _ = services.UpdateUserThemesOrLevelsIfUnitCompleted(uc.DB, input.UserID, int(unit.ID), int(unit.ThemesOrLevelID))
-	// _ = services.UpdateUserSubcategoryIfThemeCompleted(uc.DB, input.UserID, int(theme.ID), int(theme.SubcategoriesID))
-	// _ = services.UpdateUserCategoryIfSubcategoryCompleted(uc.DB, input.UserID, int(subcategory.ID), int(subcategory.CategoriesID))
 
 	return c.JSON(fiber.Map{
 		"message": "User quiz progress saved and progress updated",

@@ -33,4 +33,9 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	subcategoryNewsRoutes.Put("/:id", subcategoryNewsCtrl.Update)
 	subcategoryNewsRoutes.Delete("/:id", subcategoryNewsCtrl.Delete)
 
+	// ✅ User Subcategory Route
+	userSubcategoryCtrl := subcategoryController.NewUserSubcategoryController(db)
+	userSubcategoryRoutes := api.Group("/user-subcategory")
+	userSubcategoryRoutes.Post("/", userSubcategoryCtrl.Create)
+
 }

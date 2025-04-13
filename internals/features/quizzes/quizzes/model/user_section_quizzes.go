@@ -12,7 +12,7 @@ import (
 type UserSectionQuizzesModel struct {
 	ID               uint          `gorm:"primaryKey" json:"id"`
 	UserID           uuid.UUID     `gorm:"type:uuid;not null" json:"user_id"`
-	SectionQuizzesID int           `gorm:"not null" json:"section_quizzes_id"`
+	SectionQuizzesID uint           `gorm:"not null" json:"section_quizzes_id"`
 	CompleteQuiz     pq.Int64Array `gorm:"type:integer[];default:'{}'" json:"complete_quiz"`
 	TotalQuiz        pq.Int64Array `gorm:"type:integer[];default:'{}'" json:"total_quiz"`
 	CreatedAt        time.Time     `gorm:"autoCreateTime" json:"created_at"`

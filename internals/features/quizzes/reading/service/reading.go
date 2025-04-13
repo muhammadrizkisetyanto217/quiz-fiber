@@ -1,8 +1,7 @@
 package service
 
 import (
-	"errors"
-
+	"log"
 	userUnitModel "quiz-fiber/internals/features/category/units/model"
 
 	"github.com/google/uuid"
@@ -14,27 +13,20 @@ import (
 //////////////////////////////////////////////////////////
 
 func UpdateUserUnitFromReading(db *gorm.DB, userID uuid.UUID, unitID uint) error {
-	var userUnit userUnitModel.UserUnitModel
-	result := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit)
+	// Langsung update, tanpa create jika tidak ditemukan
+	result := db.Model(&userUnitModel.UserUnitModel{}).
+		Where("user_id = ? AND unit_id = ?", userID, unitID).
+		UpdateColumn("attempt_reading", gorm.Expr("attempt_reading + 1"))
 
-	// Jika belum ada, buat dengan AttemptReading = 1
-	if result.Error != nil && errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		userUnit = userUnitModel.UserUnitModel{
-			UserID:         userID,
-			UnitID:         unitID,
-			AttemptReading: 1,
-		}
-		return db.Create(&userUnit).Error
-	} else if result.Error != nil {
+	if result.Error != nil {
 		return result.Error
 	}
-
-	// Jika sudah ada, tambah +1
-	return db.Model(&userUnit).
-		UpdateColumn("attempt_reading", gorm.Expr("attempt_reading + ?", 1)).Error
+	if result.RowsAffected == 0 {
+		// Safety: log jika tidak ditemukan (tidak membuat)
+		log.Printf("[WARNING] Tidak ditemukan user_unit untuk user_id: %s, unit_id: %d", userID, unitID)
+	}
+	return nil
 }
-
-
 
 func CheckAndUnsetUserUnitReadingStatus(db *gorm.DB, userID uuid.UUID, unitID uint) error {
 	var count int64

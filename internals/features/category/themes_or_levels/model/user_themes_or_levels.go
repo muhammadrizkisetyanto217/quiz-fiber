@@ -12,7 +12,7 @@ import (
 type UserThemesOrLevelsModel struct {
 	ID               uint          `gorm:"primaryKey" json:"id"`
 	UserID           uuid.UUID     `gorm:"type:uuid;not null" json:"user_id"`
-	ThemesOrLevelsID int           `gorm:"not null" json:"themes_or_levels_id"`
+	ThemesOrLevelsID uint           `gorm:"not null" json:"themes_or_levels_id"`
 	CompleteUnit     pq.Int64Array `gorm:"type:integer[];default:'{}'" json:"complete_unit"`
 	TotalUnit        pq.Int64Array `gorm:"type:integer[];default:'{}'" json:"total_unit"`
 	GradeResult      int           `gorm:"default:0" json:"grade_result"`

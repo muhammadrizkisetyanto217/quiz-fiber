@@ -2,6 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"time"
 
 	userUnitModel "quiz-fiber/internals/features/category/units/model"
 
@@ -10,27 +13,35 @@ import (
 )
 
 func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade int) error {
+	if grade < 0 || grade > 100 {
+		return fmt.Errorf("nilai grade tidak valid: %d", grade)
+	}
+
 	var unitID uint
 	err := db.Table("exams").
 		Select("unit_id").
 		Where("id = ?", examID).
 		Scan(&unitID).Error
 	if err != nil || unitID == 0 {
+		log.Println("[ERROR] Gagal ambil unit_id dari exam_id:", examID)
 		return err
 	}
 
 	var userUnit userUnitModel.UserUnitModel
-	result := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit)
-
-	// ✳️ Hitung grade_result berdasarkan aktivitas
-	var gradeResult int
-
-	if userUnit.AttemptReading > 0 {
-		gradeResult += 5
+	if err := db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Println("[WARNING] user_unit tidak ditemukan saat UpdateUserUnitFromExam, user_id:", userID, "unit_id:", unitID)
+		}
+		return err
 	}
 
+	// Hitung tambahan poin dari aktivitas selain exam
+	activityBonus := 0
+	if userUnit.AttemptReading > 0 {
+		activityBonus += 5
+	}
 	if userUnit.AttemptEvaluation > 0 {
-		gradeResult += 15
+		activityBonus += 15
 	}
 
 	var totalSections, completedSections int64
@@ -44,39 +55,28 @@ func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade in
 		Count(&completedSections).Error
 
 	if totalSections > 0 && totalSections == completedSections {
-		gradeResult += 30
+		activityBonus += 30
 	}
 
-	gradeResult += grade / 2
-
-	// Insert atau Update user_unit
-	if result.Error != nil && errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		userUnit = userUnitModel.UserUnitModel{
-			UserID:      userID,
-			UnitID:      unitID,
-			GradeExam:   grade,
-			GradeResult: gradeResult,
-			IsPassed:    gradeResult > 65,
-		}
-		if err := db.Create(&userUnit).Error; err != nil {
-			return err
-		}
-	} else if result.Error != nil {
-		return result.Error
+	// Final grade_result
+	var gradeResult int
+	if activityBonus == 0 {
+		gradeResult = grade / 2
 	} else {
-		// 🧠 Update hanya grade_exam jika nilai baru lebih tinggi
-		updates := map[string]interface{}{
-			"grade_result": gradeResult,
-			"is_passed":    gradeResult > 65,
-		}
-		if grade > userUnit.GradeExam {
-			updates["grade_exam"] = grade
-		}
-		if err := db.Model(&userUnit).Updates(updates).Error; err != nil {
-			return err
-		}
+		gradeResult = activityBonus + (grade / 2)
 	}
-	return nil
+
+	updates := map[string]interface{}{
+		"grade_result": gradeResult,
+		"is_passed":    gradeResult > 65,
+		"updated_at":   time.Now(),
+	}
+
+	if grade > userUnit.GradeExam {
+		updates["grade_exam"] = grade
+	}
+
+	return db.Model(&userUnit).Updates(updates).Error
 }
 
 // ✅ Final: CheckAndUnsetExamStatus
@@ -87,6 +87,7 @@ func CheckAndUnsetExamStatus(db *gorm.DB, userID uuid.UUID, examID uint) error {
 		Where("id = ?", examID).
 		Scan(&unitID).Error
 	if err != nil || unitID == 0 {
+		log.Println("[ERROR] Gagal ambil unit_id dari exam_id untuk reset status:", examID)
 		return err
 	}
 
@@ -100,11 +101,13 @@ func CheckAndUnsetExamStatus(db *gorm.DB, userID uuid.UUID, examID uint) error {
 	}
 
 	if count == 0 {
+		log.Println("[INFO] Reset nilai exam dan result karena tidak ada user_exams tersisa, user_id:", userID, "unit_id:", unitID)
 		return db.Model(&userUnitModel.UserUnitModel{}).
 			Where("user_id = ? AND unit_id = ?", userID, unitID).
 			Updates(map[string]interface{}{
 				"grade_exam":   0,
 				"grade_result": 0,
+				"updated_at":   time.Now(),
 			}).Error
 	}
 
