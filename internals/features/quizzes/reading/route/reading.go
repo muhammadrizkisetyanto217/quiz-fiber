@@ -30,8 +30,10 @@ func ReadingRoutes(app *fiber.App, db *gorm.DB) {
 	readingRoutes.Get("/:id/convert", readingCtrl.ConvertReadingWithTooltipsId) // Tandai keyword + update DB
 
 	// User Reading Routes
-	controllerUserReading := readingController.NewUserReadingController(db)
+	userReadingCtrl := readingController.NewUserReadingController(db)
 	userReadingRoutes := api.Group("/user-readings")
-	userReadingRoutes.Post("/", controllerUserReading.CreateUserReading) // Ambil semua user_reading
-	userReadingRoutes.Get("/:id", controllerUserReading.GetAllUserReading)  // Ambil satu user_reading
+	userReadingRoutes.Post("/", userReadingCtrl.CreateUserReading)       // Ambil semua user_reading
+	userReadingRoutes.Get("/:id", userReadingCtrl.GetAllUserReading)     // Ambil satu user_reading
+	userReadingRoutes.Get("/user/:user_id", userReadingCtrl.GetByUserID) // Ambil berdasarkan user_id
+
 }

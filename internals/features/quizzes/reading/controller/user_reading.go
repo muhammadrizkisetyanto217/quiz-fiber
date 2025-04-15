@@ -6,6 +6,7 @@ import (
 	"quiz-fiber/internals/features/quizzes/reading/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -70,4 +71,27 @@ func (ctrl *UserReadingController) GetAllUserReading(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(readings)
+}
+
+// GET /api/user-readings/user/:user_id
+func (ctrl *UserReadingController) GetByUserID(c *fiber.Ctx) error {
+	userIDParam := c.Params("user_id")
+	userID, err := uuid.Parse(userIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "user_id tidak valid",
+		})
+	}
+
+	var readings []UserReadingModel.UserReading
+	if err := ctrl.DB.Where("user_id = ?", userID).Find(&readings).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil user_readings",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "User readings fetched successfully",
+		"data":    readings,
+	})
 }

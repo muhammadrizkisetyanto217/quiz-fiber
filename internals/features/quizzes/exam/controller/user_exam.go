@@ -1,7 +1,7 @@
 package controller
 
-
 import (
+	"log"
 	"net/http"
 
 	"quiz-fiber/internals/features/quizzes/exam/model"
@@ -37,6 +37,42 @@ func (c *UserExamController) Create(ctx *fiber.Ctx) error {
 		})
 	}
 
+	// Cek apakah sudah ada user_exam untuk kombinasi user_id + exam_id
+	var existing model.UserExamModel
+	err := c.DB.Where("user_id = ? AND exam_id = ?", payload.UserID, payload.ExamID).
+		First(&existing).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		log.Println("[ERROR] Gagal cek user_exam existing:", err)
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Gagal memproses data",
+			"error":   err.Error(),
+		})
+	}
+
+	if err == nil {
+		// Sudah ada → update (attempt++, nilai tertinggi)
+		existing.Attempt += 1
+		if payload.PercentageGrade > existing.PercentageGrade {
+			existing.PercentageGrade = payload.PercentageGrade
+		}
+
+		if err := c.DB.Save(&existing).Error; err != nil {
+			log.Println("[ERROR] Gagal update user_exam:", err)
+			return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Gagal memperbarui data",
+				"error":   err.Error(),
+			})
+		}
+
+		return ctx.Status(http.StatusOK).JSON(fiber.Map{
+			"message": "User exam record updated successfully",
+			"data":    existing,
+		})
+	}
+
+	// Belum ada → buat baru
+	payload.Attempt = 1
 	if err := c.DB.Create(&payload).Error; err != nil {
 		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create user exam record",
@@ -99,6 +135,29 @@ func (c *UserExamController) GetByID(ctx *fiber.Ctx) error {
 		})
 	}
 	return ctx.JSON(fiber.Map{
+		"data": data,
+	})
+}
+
+// Get user_exams by user_id (UUID)
+func (ctrl *UserExamController) GetByUserID(c *fiber.Ctx) error {
+	userIDParam := c.Params("user_id")
+	userID, err := uuid.Parse(userIDParam)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": "user_id tidak valid",
+		})
+	}
+
+	var data []model.UserExamModel
+	if err := ctrl.DB.Where("user_id = ?", userID).Find(&data).Error; err != nil {
+		log.Println("[ERROR] Gagal ambil data user_exam:", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil data",
+		})
+	}
+
+	return c.JSON(fiber.Map{
 		"data": data,
 	})
 }

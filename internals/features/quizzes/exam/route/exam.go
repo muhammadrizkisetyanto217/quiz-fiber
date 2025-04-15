@@ -27,8 +27,9 @@ func ExamRoute(app *fiber.App, db *gorm.DB) {
 	userExamCtrl := examController.NewUserExamController(db)
 	userExamRoutes := api.Group("/user-exams")
 
-	userExamRoutes.Post("/", userExamCtrl.Create)      // POST /api/user-exams
-	userExamRoutes.Get("/", userExamCtrl.GetAll)       // GET /api/user-exams
-	userExamRoutes.Get("/:id", userExamCtrl.GetByID)   // GET /api/user-exams/:id
-	userExamRoutes.Delete("/:id", userExamCtrl.Delete) // DELETE /api/user-exams/:id
+	userExamRoutes.Post("/", userExamCtrl.Create)                  // POST /api/user-exams
+	userExamRoutes.Get("/", userExamCtrl.GetAll)                   // GET /api/user-exams
+	userExamRoutes.Get("/user/:user_id", userExamCtrl.GetByUserID) // GET /api/user-exams/user/:user_id
+	userExamRoutes.Get("/:id", userExamCtrl.GetByID)               // GET /api/user-exams/:id
+	userExamRoutes.Delete("/:id", userExamCtrl.Delete)             // DELETE /api/user-exams/:id
 }

@@ -37,5 +37,7 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	userSubcategoryCtrl := subcategoryController.NewUserSubcategoryController(db)
 	userSubcategoryRoutes := api.Group("/user-subcategory")
 	userSubcategoryRoutes.Post("/", userSubcategoryCtrl.Create)
+	userSubcategoryRoutes.Get("/:id", userSubcategoryCtrl.GetByUserId)
+	
 
 }

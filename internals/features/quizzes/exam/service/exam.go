@@ -4,12 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
-	userUnitModel "quiz-fiber/internals/features/category/units/model"
-
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
+
+	userSubcategoryModel "quiz-fiber/internals/features/category/subcategory/model"
+	userThemeModel "quiz-fiber/internals/features/category/themes_or_levels/model"
+	userUnitModel "quiz-fiber/internals/features/category/units/model"
 )
 
 func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade int) error {
@@ -35,7 +39,7 @@ func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade in
 		return err
 	}
 
-	// Hitung tambahan poin dari aktivitas selain exam
+	// Hitung bonus
 	activityBonus := 0
 	if userUnit.AttemptReading > 0 {
 		activityBonus += 5
@@ -45,10 +49,7 @@ func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade in
 	}
 
 	var totalSections, completedSections int64
-	_ = db.Table("section_quizzes").
-		Where("unit_id = ?", unitID).
-		Count(&totalSections).Error
-
+	_ = db.Table("section_quizzes").Where("unit_id = ?", unitID).Count(&totalSections).Error
 	_ = db.Table("user_section_quizzes").
 		Joins("JOIN section_quizzes ON user_section_quizzes.section_quizzes_id = section_quizzes.id").
 		Where("user_section_quizzes.user_id = ? AND section_quizzes.unit_id = ?", userID, unitID).
@@ -71,12 +72,136 @@ func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade in
 		"is_passed":    gradeResult > 65,
 		"updated_at":   time.Now(),
 	}
-
 	if grade > userUnit.GradeExam {
 		updates["grade_exam"] = grade
 	}
 
-	return db.Model(&userUnit).Updates(updates).Error
+	if err := db.Model(&userUnit).Updates(updates).Error; err != nil {
+		return err
+	}
+
+	// ✅ Tambahkan ke complete_unit jika lulus
+	if gradeResult > 65 {
+		var themesID uint
+		err := db.Table("units").
+			Select("themes_or_level_id").
+			Where("id = ?", unitID).
+			Scan(&themesID).Error
+		if err != nil || themesID == 0 {
+			log.Println("[ERROR] Gagal ambil themes_or_level_id dari unit:", unitID)
+			return err
+		}
+
+		var userTheme userThemeModel.UserThemesOrLevelsModel
+		if err := db.Where("user_id = ? AND themes_or_levels_id = ?", userID, themesID).
+			First(&userTheme).Error; err != nil {
+			log.Println("[ERROR] Tidak menemukan user_theme record")
+			return err
+		}
+
+		if userTheme.CompleteUnit == nil {
+			userTheme.CompleteUnit = datatypes.JSONMap{}
+		}
+
+		unitKey := fmt.Sprintf("%d", unitID)
+		gradeStr := fmt.Sprintf("%d", gradeResult)
+		userTheme.CompleteUnit[unitKey] = gradeStr
+
+		matchCount := 0
+		for _, expectedID := range userTheme.TotalUnit {
+			if _, ok := userTheme.CompleteUnit[fmt.Sprintf("%d", expectedID)]; ok {
+				matchCount++
+			}
+		}
+
+		if matchCount == len(userTheme.TotalUnit) && len(userTheme.TotalUnit) > 0 {
+			var totalGrade int
+			for _, expectedID := range userTheme.TotalUnit {
+				if str, ok := userTheme.CompleteUnit[fmt.Sprintf("%d", expectedID)].(string); ok {
+					if g, err := strconv.Atoi(str); err == nil {
+						totalGrade += g
+					}
+				}
+			}
+			avgGrade := totalGrade / len(userTheme.TotalUnit)
+			userTheme.GradeResult = avgGrade
+
+			if err := db.Model(&userTheme).Updates(map[string]interface{}{
+				"complete_unit": userTheme.CompleteUnit,
+				"grade_result":  avgGrade,
+			}).Error; err != nil {
+				log.Println("[ERROR] Gagal update complete_unit dan grade_result:", err)
+				return err
+			}
+
+			// ✅ Lanjut update user_subcategory
+			var subcategoryID int
+			err = db.Table("themes_or_levels").
+				Select("subcategories_id").
+				Where("id = ?", themesID).
+				Scan(&subcategoryID).Error
+			if err != nil || subcategoryID == 0 {
+				log.Println("[ERROR] Gagal ambil subcategory_id dari themes_id:", themesID)
+				return err
+			}
+
+			var userSub userSubcategoryModel.UserSubcategoryModel
+			err = db.Where("user_id = ? AND subcategory_id = ?", userID, subcategoryID).
+				First(&userSub).Error
+			if err != nil {
+				log.Println("[ERROR] Tidak menemukan user_subcategory record")
+				return err
+			}
+
+			if userSub.CompleteThemesOrLevels == nil {
+				userSub.CompleteThemesOrLevels = datatypes.JSONMap{}
+			}
+			userSub.CompleteThemesOrLevels[fmt.Sprintf("%d", themesID)] = fmt.Sprintf("%d", avgGrade)
+
+			matchCount := 0
+			for _, themeID := range userSub.TotalThemesOrLevels {
+				if _, ok := userSub.CompleteThemesOrLevels[fmt.Sprintf("%d", themeID)]; ok {
+					matchCount++
+				}
+			}
+
+			if matchCount == len(userSub.TotalThemesOrLevels) && len(userSub.TotalThemesOrLevels) > 0 {
+				var totalThemeGrade int
+				for _, themeID := range userSub.TotalThemesOrLevels {
+					if str, ok := userSub.CompleteThemesOrLevels[fmt.Sprintf("%d", themeID)].(string); ok {
+						if g, err := strconv.Atoi(str); err == nil {
+							totalThemeGrade += g
+						}
+					}
+				}
+				avgThemeGrade := totalThemeGrade / len(userSub.TotalThemesOrLevels)
+				userSub.GradeResult = avgThemeGrade
+
+				if err := db.Model(&userSub).Updates(map[string]interface{}{
+					"complete_themes_or_levels": userSub.CompleteThemesOrLevels,
+					"grade_result":              avgThemeGrade,
+				}).Error; err != nil {
+					log.Println("[ERROR] Gagal update complete_themes_or_levels dan grade_result:", err)
+					return err
+				}
+			} else {
+				if err := db.Model(&userSub).
+					Update("complete_themes_or_levels", userSub.CompleteThemesOrLevels).Error; err != nil {
+					log.Println("[ERROR] Gagal update complete_themes_or_levels:", err)
+					return err
+				}
+			}
+		} else {
+			// Belum semua unit selesai → update complete_unit saja
+			if err := db.Model(&userTheme).
+				Update("complete_unit", userTheme.CompleteUnit).Error; err != nil {
+				log.Println("[ERROR] Gagal update complete_unit:", err)
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // ✅ Final: CheckAndUnsetExamStatus
@@ -102,13 +227,47 @@ func CheckAndUnsetExamStatus(db *gorm.DB, userID uuid.UUID, examID uint) error {
 
 	if count == 0 {
 		log.Println("[INFO] Reset nilai exam dan result karena tidak ada user_exams tersisa, user_id:", userID, "unit_id:", unitID)
-		return db.Model(&userUnitModel.UserUnitModel{}).
+
+		// ✅ Reset nilai di user_unit
+		if err := db.Model(&userUnitModel.UserUnitModel{}).
 			Where("user_id = ? AND unit_id = ?", userID, unitID).
 			Updates(map[string]interface{}{
 				"grade_exam":   0,
 				"grade_result": 0,
 				"updated_at":   time.Now(),
-			}).Error
+			}).Error; err != nil {
+			return err
+		}
+
+		// ✅ Hapus dari complete_unit di user_themes_or_levels
+		var themesID uint
+		err := db.Table("units").
+			Select("themes_or_level_id").
+			Where("id = ?", unitID).
+			Scan(&themesID).Error
+		if err != nil || themesID == 0 {
+			log.Println("[ERROR] Gagal ambil themes_or_level_id dari unit:", unitID)
+			return err
+		}
+
+		var userTheme userThemeModel.UserThemesOrLevelsModel
+		err = db.Where("user_id = ? AND themes_or_levels_id = ?", userID, themesID).
+			First(&userTheme).Error
+		if err != nil {
+			log.Println("[WARNING] Tidak menemukan user_theme untuk reset complete_unit")
+			return nil // aman, tidak perlu error kalau tidak ketemu
+		}
+
+		if userTheme.CompleteUnit != nil {
+			unitKey := fmt.Sprintf("%d", unitID)
+			delete(userTheme.CompleteUnit, unitKey)
+
+			if err := db.Model(&userTheme).
+				Update("complete_unit", userTheme.CompleteUnit).Error; err != nil {
+				log.Println("[ERROR] Gagal hapus unit dari complete_unit:", err)
+				return err
+			}
+		}
 	}
 
 	return nil

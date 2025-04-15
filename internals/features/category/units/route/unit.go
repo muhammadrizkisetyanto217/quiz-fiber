@@ -32,4 +32,11 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	unitNewsRoutes.Post("/", unitNewsCtrl.Create)
 	unitNewsRoutes.Put("/:id", unitNewsCtrl.Update)
 	unitNewsRoutes.Delete("/:id", unitNewsCtrl.Delete)
+
+	// User Unit
+	userUnitCtrl := unitController.NewUserUnitController(db)
+	userUnitRoutes := api.Group("/user-units")
+	userUnitRoutes.Get("/:user_id", userUnitCtrl.GetByUserID)
+	userUnitRoutes.Get("/:user_id/themes-or-levels/:themes_or_levels_id", userUnitCtrl.GetUserUnitsByThemesOrLevelsAndUserID)
+
 }

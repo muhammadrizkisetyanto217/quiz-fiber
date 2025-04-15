@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS user_themes_or_levels (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
     themes_or_levels_id INTEGER NOT NULL,
-    complete_unit INTEGER[] NOT NULL DEFAULT '{}',
+    complete_unit JSONB NOT NULL DEFAULT '{}'::jsonb,
     total_unit INTEGER[] NOT NULL DEFAULT '{}',
     grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS user_subcategory (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
     subcategory_id INTEGER NOT NULL,
-    complete_themes_or_levels INTEGER[] NOT NULL DEFAULT '{}',
+    complete_themes_or_levels JSONB NOT NULL DEFAULT '{}'::jsonb,
     total_themes_or_levels INTEGER[] NOT NULL DEFAULT '{}',
     grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
