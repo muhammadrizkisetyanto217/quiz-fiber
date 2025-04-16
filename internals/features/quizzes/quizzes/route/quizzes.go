@@ -34,9 +34,15 @@ func SectionQuizzesRoutes(app *fiber.App, db *gorm.DB) {
 	quizRoutes.Put("/:id", quizController.UpdateQuiz)
 	quizRoutes.Delete("/:id", quizController.DeleteQuiz)
 
-
 	// 🧑‍🎓 User Quiz Routes
 	userQuizController := quizzesController.NewUserQuizController(db)
 	userQuizRoutes := api.Group("/user-quizzes")
 	userQuizRoutes.Post("/", userQuizController.CreateOrUpdateUserQuiz)
+	userQuizRoutes.Get("/user/:user_id", userQuizController.GetUserQuizzesByUserID)
+
+	// 🧑‍🎓 User Section Quizzes Routes
+	userSectionQuizzesController := quizzesController.NewUserSectionQuizzesController(db)
+	userSectionQuizzesRoutes := api.Group("/user-section-quizzes")
+	userSectionQuizzesRoutes.Get("/user/:user_id", userSectionQuizzesController.GetUserSectionQuizzesByUserID)
+
 }

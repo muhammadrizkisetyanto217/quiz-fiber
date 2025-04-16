@@ -18,8 +18,9 @@ CREATE TABLE IF NOT EXISTS user_section_quizzes (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
     section_quizzes_id INTEGER NOT NULL,
-    complete_quiz INTEGER[] NOT NULL DEFAULT '{}',
+    complete_quiz JSONB NOT NULL DEFAULT '{}'::jsonb,
     total_quiz INTEGER[] NOT NULL DEFAULT '{}',
+    grade_result INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,8 +33,9 @@ CREATE TABLE IF NOT EXISTS user_unit (
     unit_id INTEGER NOT NULL,
     attempt_reading INTEGER DEFAULT 0 NOT NULL,
     attempt_evaluation INTEGER DEFAULT 0 NOT NULL,
-    complete_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
+    complete_section_quizzes JSONB NOT NULL DEFAULT '{}'::jsonb,
     total_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
+    grade_quiz INTEGER NOT NULL DEFAULT 0,
     grade_exam INTEGER NOT NULL DEFAULT 0,
     grade_result INTEGER NOT NULL DEFAULT 0,
     is_passed BOOLEAN NOT NULL DEFAULT FALSE,

@@ -124,7 +124,7 @@ func (ctrl *UserSubcategoryController) Create(c *fiber.Ctx) error {
 			UnitID:                 unit.ID,
 			AttemptReading:         0,
 			AttemptEvaluation:      0,
-			CompleteSectionQuizzes: pq.Int64Array{},
+			CompleteSectionQuizzes: datatypes.JSON([]byte(`[]`)),
 			TotalSectionQuizzes:    pq.Int64Array{},
 			GradeExam:              0,
 			IsPassed:               false,

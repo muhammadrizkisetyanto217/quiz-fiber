@@ -17,6 +17,7 @@ import (
 )
 
 func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade int) error {
+	log.Println("[SERVICE] UpdateUserUnitFromExam - userID:", userID, "examID:", examID, "grade:", grade)
 	if grade < 0 || grade > 100 {
 		return fmt.Errorf("nilai grade tidak valid: %d", grade)
 	}

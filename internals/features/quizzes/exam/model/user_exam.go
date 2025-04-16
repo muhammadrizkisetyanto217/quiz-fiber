@@ -29,6 +29,10 @@ func (u *UserExamModel) AfterCreate(tx *gorm.DB) error {
 	return service.UpdateUserUnitFromExam(tx, u.UserID, u.ExamID, u.PercentageGrade)
 }
 
+func (u *UserExamModel) AfterUpdate(tx *gorm.DB) error {
+	return service.UpdateUserUnitFromExam(tx, u.UserID, u.ExamID, u.PercentageGrade)
+}
+
 func (u *UserExamModel) AfterDelete(tx *gorm.DB) error {
 	return service.CheckAndUnsetExamStatus(tx, u.UserID, u.ExamID)
 }

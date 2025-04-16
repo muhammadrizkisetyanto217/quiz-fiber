@@ -22,6 +22,7 @@ muhammadrizkisetyanto@MacBook-Air-Muhammad arabiya-syari-fiber-1 % PGPASSWORD="q
 
 # Refresh port
 kill -9 $(lsof -t -i:8080)
+kill -9 $(lsof -t -i:8080) && go run main.go
 
 
 # Hapus Versi Migrasi yang Bermasalah dari Database
