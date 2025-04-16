@@ -26,15 +26,18 @@ func (ctrl *UserUnitController) GetByUserID(c *fiber.Ctx) error {
 	userIDParam := c.Params("user_id")
 	userID, err := uuid.Parse(userIDParam)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "user_id tidak valid",
 		})
 	}
 
 	var data []userModel.UserUnitModel
-	if err := ctrl.DB.Where("user_id = ?", userID).Find(&data).Error; err != nil {
+	if err := ctrl.DB.
+		Preload("SectionProgress").
+		Where("user_id = ?", userID).
+		Find(&data).Error; err != nil {
 		log.Println("[ERROR] Gagal ambil data user_unit:", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Gagal mengambil data",
 		})
 	}

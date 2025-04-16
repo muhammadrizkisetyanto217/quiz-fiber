@@ -147,24 +147,24 @@ func UpdateUserUnitIfSectionCompleted(db *gorm.DB, userID uuid.UUID, unitID uint
 	_ = json.Unmarshal(userUnit.CompleteSectionQuizzes, &progressList)
 
 	found := false
-	for _, p := range progressList {
+	for i, p := range progressList {
 		if p.ID == sectionID {
+			// Update jika score baru lebih tinggi
+			if userSection.GradeResult > p.Score {
+				progressList[i].Score = userSection.GradeResult
+			}
 			found = true
 			break
 		}
 	}
-	if found {
-		log.Println("[SERVICE] Section ID already recorded in UserUnitModel")
-		return nil
+	if !found {
+		progressList = append(progressList, SectionProgress{
+			ID:      sectionID,
+			Score:   userSection.GradeResult,
+			Attempt: 1,
+		})
 	}
 
-	progressList = append(progressList, SectionProgress{
-		ID:      sectionID,
-		Score:   userSection.GradeResult,
-		Attempt: 1,
-	})
-
-	// ✅ Hitung GradeQuiz jika semua section selesai
 	var gradeQuiz int
 	if len(progressList) == len(totalSectionIDs) {
 		totalScore := 0
@@ -181,10 +181,17 @@ func UpdateUserUnitIfSectionCompleted(db *gorm.DB, userID uuid.UUID, unitID uint
 	userUnit.GradeQuiz = gradeQuiz
 
 	log.Println("[SERVICE] Updating existing UserUnitModel")
-	return db.Model(&userUnit).Updates(map[string]interface{}{
-		"complete_section_quizzes": userUnit.CompleteSectionQuizzes,
-		"total_section_quizzes":    totalSectionIDs,
-		"grade_quiz":               gradeQuiz,
-		"updated_at":               time.Now(),
-	}).Error
+	result := db.Model(&userUnit).
+		Select("complete_section_quizzes", "total_section_quizzes", "grade_quiz", "updated_at").
+		Updates(map[string]interface{}{
+			"complete_section_quizzes": userUnit.CompleteSectionQuizzes,
+			"total_section_quizzes":    totalSectionIDs,
+			"grade_quiz":               gradeQuiz,
+			"updated_at":               time.Now(),
+		})
+	log.Printf("[DEBUG] RowsAffected = %d", result.RowsAffected)
+	if result.Error != nil {
+		log.Printf("[ERROR] Failed to update user_unit: %v", result.Error)
+	}
+	return result.Error
 }
