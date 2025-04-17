@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -15,6 +16,11 @@ import (
 	userThemeModel "quiz-fiber/internals/features/category/themes_or_levels/model"
 	userUnitModel "quiz-fiber/internals/features/category/units/model"
 )
+
+type AttemptEvaluationData struct {
+	Attempt         int `json:"attempt"`
+	GradeEvaluation int `json:"grade_evaluation"`
+}
 
 func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade int) error {
 	log.Println("[SERVICE] UpdateUserUnitFromExam - userID:", userID, "examID:", examID, "grade:", grade)
@@ -45,8 +51,13 @@ func UpdateUserUnitFromExam(db *gorm.DB, userID uuid.UUID, examID uint, grade in
 	if userUnit.AttemptReading > 0 {
 		activityBonus += 5
 	}
-	if userUnit.AttemptEvaluation > 0 {
-		activityBonus += 15
+	var evalData AttemptEvaluationData
+	if len(userUnit.AttemptEvaluation) > 0 {
+		if err := json.Unmarshal(userUnit.AttemptEvaluation, &evalData); err != nil {
+			log.Println("[ERROR] Gagal decode AttemptEvaluation JSON:", err)
+		} else if evalData.Attempt > 0 {
+			activityBonus += 15
+		}
 	}
 
 	var totalSections, completedSections int64

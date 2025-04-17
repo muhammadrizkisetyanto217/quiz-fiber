@@ -47,8 +47,8 @@ func (ctrl *UserEvaluationController) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user evaluation"})
 	}
 
-	// ✅ Update ke user_unit
-	if err := service.UpdateUserUnitFromEvaluation(ctrl.DB, input.UserID, input.UnitID); err != nil {
+	// ✅ Update ke user_unit hanya jika grade lebih tinggi
+	if err := service.UpdateUserUnitFromEvaluation(ctrl.DB, input.UserID, input.UnitID, input.PercentageGrade); err != nil {
 		log.Println("[ERROR] Failed to update user unit from evaluation:", err)
 	}
 

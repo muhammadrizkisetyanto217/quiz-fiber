@@ -1,27 +1,64 @@
 package service
 
 import (
+	"encoding/json"
 	"log"
 	userUnitModel "quiz-fiber/internals/features/category/units/model"
+	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-func UpdateUserUnitFromEvaluation(db *gorm.DB, userID uuid.UUID, unitID uint) error {
-	// Langsung update, tanpa create jika tidak ditemukan
-	result := db.Model(&userUnitModel.UserUnitModel{}).
-		Where("user_id = ? AND unit_id = ?", userID, unitID).
-		UpdateColumn("attempt_evaluation", gorm.Expr("attempt_evaluation + 1"))
+type AttemptEvaluationData struct {
+	Attempt         int `json:"attempt"`
+	GradeEvaluation int `json:"grade_evaluation"`
+}
 
-	if result.Error != nil {
-		return result.Error
+func UpdateUserUnitFromEvaluation(db *gorm.DB, userID uuid.UUID, unitID uint, gradePercentage int) error {
+	var userUnit userUnitModel.UserUnitModel
+
+	// Ambil hanya kolom yang diperlukan
+	err := db.Select("attempt_evaluation").
+		Where("user_id = ? AND unit_id = ?", userID, unitID).
+		First(&userUnit).Error
+	if err != nil {
+		log.Printf("[WARNING] Gagal ambil user_unit: user_id=%s unit_id=%d err=%v", userID, unitID, err)
+		return err
 	}
-	if result.RowsAffected == 0 {
-		// Safety: log jika tidak ditemukan (tidak membuat)
-		log.Printf("[WARNING] Tidak ditemukan user_unit untuk user_id: %s, unit_id: %d", userID, unitID)
+
+	// Decode JSON
+	var evalData AttemptEvaluationData
+	if len(userUnit.AttemptEvaluation) > 0 {
+		if err := json.Unmarshal(userUnit.AttemptEvaluation, &evalData); err != nil {
+			log.Printf("[ERROR] Gagal decode JSON attempt_evaluation: %v", err)
+			return err
+		}
 	}
-	return nil
+
+	// Update data attempt dan nilai
+	evalData.Attempt++
+	if gradePercentage > evalData.GradeEvaluation {
+		evalData.GradeEvaluation = gradePercentage
+	}
+
+	// Encode JSON kembali
+	jsonEval, err := json.Marshal(evalData)
+	if err != nil {
+		log.Printf("[ERROR] Gagal encode JSON: %v", err)
+		return err
+	}
+
+	// Simpan hanya attempt_evaluation
+	updateData := map[string]interface{}{
+		"attempt_evaluation": datatypes.JSON(jsonEval),
+		"updated_at":         time.Now(),
+	}
+
+	return db.Model(&userUnitModel.UserUnitModel{}).
+		Where("user_id = ? AND unit_id = ?", userID, unitID).
+		Updates(updateData).Error
 }
 
 func CheckAndUnsetEvaluationStatus(db *gorm.DB, userID uuid.UUID, unitID uint) error {

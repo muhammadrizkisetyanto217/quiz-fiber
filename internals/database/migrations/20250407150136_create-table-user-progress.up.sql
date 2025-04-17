@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS user_unit (
     user_id UUID NOT NULL,
     unit_id INTEGER NOT NULL,
     attempt_reading INTEGER DEFAULT 0 NOT NULL,
-    attempt_evaluation INTEGER DEFAULT 0 NOT NULL,
+    attempt_evaluation JSONB NOT NULL DEFAULT '{}'::jsonb,
     complete_section_quizzes JSONB NOT NULL DEFAULT '{}'::jsonb,
     total_section_quizzes INTEGER[] NOT NULL DEFAULT '{}',
     grade_quiz INTEGER NOT NULL DEFAULT 0,

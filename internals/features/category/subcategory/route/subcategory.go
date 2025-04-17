@@ -38,6 +38,6 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	userSubcategoryRoutes := api.Group("/user-subcategory")
 	userSubcategoryRoutes.Post("/", userSubcategoryCtrl.Create)
 	userSubcategoryRoutes.Get("/:id", userSubcategoryCtrl.GetByUserId)
-	
+	userSubcategoryRoutes.Get("/category/:user_id/difficulty/:difficulty_id", userSubcategoryCtrl.GetWithProgressByParam)
 
 }

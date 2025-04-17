@@ -19,7 +19,6 @@ muhammadrizkisetyanto@MacBook-Air-Muhammad arabiya-syari-fiber-1 % migrate -data
 muhammadrizkisetyanto@MacBook-Air-Muhammad arabiya-syari-fiber-1 % PGPASSWORD="qXdMRsMSGEgQvVrLuBjmUAGkytJwsaWk" psql -h trolley.proxy.rlwy.net -p 59123 -U postgres -d railway
 
 
-
 # Refresh port
 kill -9 $(lsof -t -i:8080)
 kill -9 $(lsof -t -i:8080) && go run main.go
