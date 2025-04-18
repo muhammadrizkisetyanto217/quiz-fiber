@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"quiz-fiber/internals/features/quizzes/exam/model"
+	"quiz-fiber/internals/features/quizzes/exam/service"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -64,6 +65,9 @@ func (c *UserExamController) Create(ctx *fiber.Ctx) error {
 				"error":   err.Error(),
 			})
 		}
+
+		// Tambahkan log point
+		_ = service.AddPointFromExam(c.DB, existing.UserID, existing.ExamID, existing.Attempt)
 
 		return ctx.Status(http.StatusOK).JSON(fiber.Map{
 			"message": "User exam record updated successfully",

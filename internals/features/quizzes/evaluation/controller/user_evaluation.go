@@ -17,7 +17,7 @@ func NewUserEvaluationController(db *gorm.DB) *UserEvaluationController {
 	return &UserEvaluationController{DB: db}
 }
 
-// POST /api/user_evaluations
+// POST /api/user_evaluations3
 func (ctrl *UserEvaluationController) Create(c *fiber.Ctx) error {
 	var input userEvaluationModel.UserEvaluationModel
 	body := c.Body()
@@ -50,6 +50,11 @@ func (ctrl *UserEvaluationController) Create(c *fiber.Ctx) error {
 	// ✅ Update ke user_unit hanya jika grade lebih tinggi
 	if err := service.UpdateUserUnitFromEvaluation(ctrl.DB, input.UserID, input.UnitID, input.PercentageGrade); err != nil {
 		log.Println("[ERROR] Failed to update user unit from evaluation:", err)
+	}
+
+	// Tambahkan log point dari evaluation
+	if err := service.AddPointFromEvaluation(ctrl.DB, input.UserID, input.EvaluationID, input.Attempt); err != nil {
+		log.Println("[ERROR] Gagal menambahkan poin dari evaluation:", err)
 	}
 
 	log.Println("[SUCCESS] User evaluation created successfully")

@@ -53,6 +53,12 @@ func (ctrl *UserReadingController) CreateUserReading(c *fiber.Ctx) error {
 		log.Println("[ERROR] Failed to update user unit from reading:", err)
 	}
 
+	log.Println("[DEBUG] Sebelum panggil AddPointFromReading")
+	if err := service.AddPointFromReading(ctrl.DB, input.UserID, input.ReadingID, input.Attempt); err != nil {
+		log.Println("[ERROR] Gagal menambahkan poin dari reading:", err)
+	}
+	log.Println("[DEBUG] Setelah panggil AddPointFromReading")
+
 	log.Println("[SUCCESS] User reading created successfully")
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "User reading created successfully",

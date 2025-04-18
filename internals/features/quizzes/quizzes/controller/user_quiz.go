@@ -93,6 +93,11 @@ func (uc *UserQuizController) CreateOrUpdateUserQuiz(c *fiber.Ctx) error {
 	)
 	_ = services.UpdateUserUnitIfSectionCompleted(uc.DB, input.UserID, section.UnitID, section.ID)
 
+	// ✅ Tambah poin dari quiz
+	if err := services.AddPointFromQuiz(uc.DB, input.UserID, input.QuizID, input.Attempt); err != nil {
+		log.Println("[ERROR] Gagal menambahkan poin dari quiz:", err)
+	}
+
 	return c.JSON(fiber.Map{
 		"message": "User quiz progress saved and progress updated",
 		"data":    input,

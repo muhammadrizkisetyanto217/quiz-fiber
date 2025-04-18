@@ -9,7 +9,7 @@ import (
 type UserQuizzesModel struct {
 	ID              uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID          uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
-	QuizID          uint      `gorm:"column:quiz_id;not null" json:"quiz_id"` // Ubah ke quiz_id sesuai tabel baru
+	QuizID          uint      `gorm:"column:quiz_id;not null" json:"quiz_id"` 
 	Attempt         int       `gorm:"default:1;not null" json:"attempt"`
 	PercentageGrade int       `gorm:"default:0;not null" json:"percentage_grade"`
 	TimeDuration    int       `gorm:"default:0;not null" json:"time_duration"`

@@ -15,7 +15,7 @@ func AuthRoutes(app *fiber.App, db *gorm.DB) {
 	//* Dengan constructor
 	authController := controller.NewAuthController(db)
 
-	// // 🔥 Setup AuthController
+	// 🔥 Setup AuthController
 	auth := app.Group("/auth")
 	auth.Post("/register", authController.Register) // ✅ Register user baru
 	auth.Post("/login", authController.Login)       // ✅ Login user

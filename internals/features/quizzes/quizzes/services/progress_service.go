@@ -112,86 +112,98 @@ func UpdateUserSectionIfQuizCompleted(
 }
 
 func UpdateUserUnitIfSectionCompleted(db *gorm.DB, userID uuid.UUID, unitID uint, sectionID uint) error {
-	log.Println("[SERVICE] UpdateUserUnitIfSectionCompleted - userID:", userID, "unitID:", unitID, "sectionID:", sectionID)
+	type QuizCompletion struct {
+		ID      int `json:"id"`
+		Score   int `json:"score"`
+		Attempt int `json:"attempt"`
+	}
 
-	var allSections []quizzesModel.SectionQuizzesModel
-	if err := db.Where("unit_id = ? AND deleted_at IS NULL", unitID).Find(&allSections).Error; err != nil {
-		log.Println("[ERROR] Failed to fetch sections for unit:", err)
+	// Step 1: Ambil semua section_quizzes dalam unit
+	var sections []quizzesModel.SectionQuizzesModel
+	if err := db.Where("unit_id = ? AND deleted_at IS NULL", unitID).Find(&sections).Error; err != nil {
+		log.Printf("[ERROR] Gagal ambil section_quizzes: %v", err)
 		return err
 	}
-	totalSectionIDs := pq.Int64Array{}
-	for _, section := range allSections {
-		totalSectionIDs = append(totalSectionIDs, int64(section.ID))
-	}
 
-	var userSection quizzesModel.UserSectionQuizzesModel
-	err := db.Where("user_id = ? AND section_quizzes_id = ?", userID, sectionID).First(&userSection).Error
-	if err != nil {
-		log.Println("[ERROR] UserSectionQuizzesModel not found, skipping unit update")
-		return nil
-	}
+	// Step 2: Cek apakah semua section sudah complete oleh user
+	for _, section := range sections {
+		var userSection quizzesModel.UserSectionQuizzesModel
+		if err := db.Where("user_id = ? AND section_quizzes_id = ?", userID, section.ID).
+			First(&userSection).Error; err != nil {
+			log.Printf("[INFO] Section %d belum ada progress oleh user", section.ID)
+			return nil // Belum lengkap
+		}
 
-	if len(userSection.CompleteQuiz) < len(userSection.TotalQuiz) {
-		log.Println("[INFO] Section belum selesai, tidak update ke UserUnitModel")
-		return nil
-	}
+		// Langsung pakai TotalQuiz dari model
+		totalQuizIDs := userSection.TotalQuiz
 
-	var userUnit userUnitModel.UserUnitModel
-	err = db.Where("user_id = ? AND unit_id = ?", userID, unitID).First(&userUnit).Error
-	if err != nil {
-		log.Printf("[WARNING] user_unit belum tersedia untuk user_id=%s, unit_id=%d\n", userID.String(), unitID)
-		return nil
-	}
+		// Unmarshal complete_quiz
+		var completedQuizData []QuizCompletion
+		if err := json.Unmarshal(userSection.CompleteQuiz, &completedQuizData); err != nil {
+			log.Printf("[ERROR] Gagal decode complete_quiz: %v", err)
+			return err
+		}
 
-	var progressList []SectionProgress
-	_ = json.Unmarshal(userUnit.CompleteSectionQuizzes, &progressList)
+		// Cek apakah semua quiz sudah complete
+		completedIDs := map[int]bool{}
+		for _, q := range completedQuizData {
+			completedIDs[q.ID] = true
+		}
 
-	found := false
-	for i, p := range progressList {
-		if p.ID == sectionID {
-			// Update jika score baru lebih tinggi
-			if userSection.GradeResult > p.Score {
-				progressList[i].Score = userSection.GradeResult
+		for _, id := range totalQuizIDs {
+			if !completedIDs[int(id)] {
+				log.Printf("[INFO] Section %d belum lengkap, quiz ID %d belum dikerjakan", section.ID, id)
+				return nil
 			}
+		}
+	}
+
+	// Step 3: Update user_unit jika semua section dalam unit sudah complete
+	var userUnit userUnitModel.UserUnitModel
+	if err := db.Where("user_id = ? AND unit_id = ?", userID, unitID).
+		First(&userUnit).Error; err != nil {
+		log.Printf("[ERROR] Gagal ambil user_unit: %v", err)
+		return err
+	}
+
+	// Tambahkan sectionID ke complete_section_quizzes jika belum ada
+	// Decode datatypes.JSON ke slice int64
+	var completeSectionIDs []int64
+	if len(userUnit.CompleteSectionQuizzes) > 0 {
+		if err := json.Unmarshal(userUnit.CompleteSectionQuizzes, &completeSectionIDs); err != nil {
+			log.Printf("[ERROR] Gagal decode complete_section_quizzes: %v", err)
+			return err
+		}
+	}
+
+	// Cek apakah sectionID sudah ada
+	found := false
+	for _, sid := range completeSectionIDs {
+		if uint(sid) == sectionID {
 			found = true
 			break
 		}
 	}
+
+	// Tambahkan jika belum ada
 	if !found {
-		progressList = append(progressList, SectionProgress{
-			ID:      sectionID,
-			Score:   userSection.GradeResult,
-			Attempt: 1,
-		})
-	}
+		completeSectionIDs = append(completeSectionIDs, int64(sectionID))
 
-	var gradeQuiz int
-	if len(progressList) == len(totalSectionIDs) {
-		totalScore := 0
-		for _, p := range progressList {
-			totalScore += p.Score
+		// Encode ulang ke JSON
+		updatedJSON, err := json.Marshal(completeSectionIDs)
+		if err != nil {
+			log.Printf("[ERROR] Gagal encode complete_section_quizzes: %v", err)
+			return err
 		}
-		gradeQuiz = totalScore / len(progressList)
-		log.Printf("[SERVICE] Semua section complete. GradeQuiz di-set ke %d\n", gradeQuiz)
+		userUnit.CompleteSectionQuizzes = updatedJSON
 	}
 
-	progressJSON, _ := json.Marshal(progressList)
-	userUnit.CompleteSectionQuizzes = datatypes.JSON(progressJSON)
-	userUnit.TotalSectionQuizzes = totalSectionIDs
-	userUnit.GradeQuiz = gradeQuiz
-
-	log.Println("[SERVICE] Updating existing UserUnitModel")
-	result := db.Model(&userUnit).
-		Select("complete_section_quizzes", "total_section_quizzes", "grade_quiz", "updated_at").
-		Updates(map[string]interface{}{
-			"complete_section_quizzes": userUnit.CompleteSectionQuizzes,
-			"total_section_quizzes":    totalSectionIDs,
-			"grade_quiz":               gradeQuiz,
-			"updated_at":               time.Now(),
-		})
-	log.Printf("[DEBUG] RowsAffected = %d", result.RowsAffected)
-	if result.Error != nil {
-		log.Printf("[ERROR] Failed to update user_unit: %v", result.Error)
+	userUnit.UpdatedAt = time.Now()
+	if err := db.Save(&userUnit).Error; err != nil {
+		log.Printf("[ERROR] Gagal update user_unit: %v", err)
+		return err
 	}
-	return result.Error
+
+	log.Printf("[SERVICE] UserUnit berhasil diperbarui - userID: %s, unitID: %d, sectionID: %d", userID, unitID, sectionID)
+	return nil
 }
