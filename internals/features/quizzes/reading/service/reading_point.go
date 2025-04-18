@@ -5,6 +5,7 @@ import (
 	"time"
 
 	userPointLog "quiz-fiber/internals/features/progress/point/model"
+	updateUserProgressTotalService "quiz-fiber/internals/features/progress/progress/service"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -40,5 +41,11 @@ func AddPointFromReading(db *gorm.DB, userID uuid.UUID, readingID uint, attempt 
 	}
 
 	log.Printf("[SUCCESS] Poin reading attempt %d ditambahkan: %d poin", attempt, point)
+
+	// ✅ Tambahkan update total poin ke user_progress
+	if err := updateUserProgressTotalService.UpdateUserProgressTotal(db, userID); err != nil {
+		log.Println("[WARNING] Gagal update user_progress:", err)
+	}
+	
 	return nil
 }

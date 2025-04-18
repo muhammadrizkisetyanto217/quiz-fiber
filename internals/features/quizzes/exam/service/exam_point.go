@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	userPointLog "quiz-fiber/internals/features/progress/point/model"
+	updateUserProgressTotalService "quiz-fiber/internals/features/progress/progress/service"
 )
 
 func AddPointFromExam(db *gorm.DB, userID uuid.UUID, examID uint, attempt int) error {
@@ -37,6 +38,11 @@ func AddPointFromExam(db *gorm.DB, userID uuid.UUID, examID uint, attempt int) e
 	if err := db.Create(&pointLog).Error; err != nil {
 		log.Println("[ERROR] Gagal insert user_point_log (exam):", err)
 		return err
+	}
+
+	// ✅ Tambahkan update total poin ke user_progress
+	if err := updateUserProgressTotalService.UpdateUserProgressTotal(db, userID); err != nil {
+		log.Println("[WARNING] Gagal update user_progress:", err)
 	}
 
 	log.Printf("[SUCCESS] Poin exam attempt %d ditambahkan: %d poin", attempt, point)
