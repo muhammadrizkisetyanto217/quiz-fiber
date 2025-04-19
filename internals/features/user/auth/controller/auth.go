@@ -18,12 +18,13 @@ import (
 	"quiz-fiber/internals/configs"
 	modelAuth "quiz-fiber/internals/features/user/auth/models"
 	modelUser "quiz-fiber/internals/features/user/user/models"
+
+	progressUserService "quiz-fiber/internals/features/progress/progress/service"
 )
 
 type AuthController struct {
 	DB *gorm.DB
 }
-
 
 func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{DB: db}
@@ -52,6 +53,10 @@ func (ac *AuthController) Register(c *fiber.Ctx) error {
 		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to register user"})
 	}
+
+	// ✅ Register berhasil → langsung buat user_progress
+	_ = progressUserService.CreateInitialUserProgress(ac.DB, input.ID)
+
 	log.Printf("[SUCCESS] User registered: ID=%d, Email=%s", input.ID, input.Email)
 	return c.Status(201).JSON(fiber.Map{"message": "User registered successfully"})
 }
