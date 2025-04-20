@@ -17,6 +17,9 @@ func DonationRoutes(app *fiber.App, db *gorm.DB) {
 	donationRoutes := api.Group("/donations")
 	donationRoutes.Post("/", donationCtrl.CreateDonation) // Buat donasi + Snap token
 
-	// 🌐 Webhook dari Midtrans → tidak perlu pakai middleware auth
-	app.Post("/api/donations/notification", controller.HandleMidtransNotification)
+	// ✅ Webhook tanpa middleware auth, inject db manual
+	app.Post("/api/donations/notification", func(c *fiber.Ctx) error {
+		c.Locals("db", db)
+		return controller.HandleMidtransNotification(c)
+	})
 }
