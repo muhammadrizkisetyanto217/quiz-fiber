@@ -92,12 +92,13 @@ func (ctrl *UserUnitController) GetUserUnitsByThemesOrLevelsAndUserID(c *fiber.C
 		})
 	}
 
-	// Step 4: Ambil user_units (tanpa preload SectionProgress)
+	// Step 4: Ambil user_units dengan preload SectionProgress
 	var userUnits []userModel.UserUnitModel
 	if err := ctrl.DB.
+		Preload("SectionProgress", "user_id = ?", userID).
 		Where("user_id = ? AND unit_id IN ?", userID, unitIDs).
 		Find(&userUnits).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Gagal ambil data progress unit",
 		})
 	}

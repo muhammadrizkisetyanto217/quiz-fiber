@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"fmt"
 	"log"
 	subcategoryModel "quiz-fiber/internals/features/category/subcategory/model"
 	themesModel "quiz-fiber/internals/features/category/themes_or_levels/model"
 	unitModel "quiz-fiber/internals/features/category/units/model"
+	sectionQuizzesModel "quiz-fiber/internals/features/quizzes/quizzes/model"
 
 	"time"
 
@@ -118,14 +120,28 @@ func (ctrl *UserSubcategoryController) Create(c *fiber.Ctx) error {
 	// Buat data userUnits untuk batch insert
 	var userUnits []unitModel.UserUnitModel
 	now := time.Now()
+
 	for _, unit := range units {
+		// Ambil semua ID dari section_quizzes berdasarkan unit_id
+		var sectionQuizIDs []int64
+		if err := tx.Model(&sectionQuizzesModel.SectionQuizzesModel{}).
+			Where("unit_id = ?", unit.ID).
+			Pluck("id", &sectionQuizIDs).Error; err != nil {
+			tx.Rollback()
+			log.Printf("[ERROR] Gagal ambil section_quizzes untuk unit_id %d: %v", unit.ID, err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fmt.Sprintf("Gagal mengambil section_quizzes untuk unit_id %d", unit.ID),
+			})
+		}
+
+		// Tambahkan ke list user_unit
 		userUnits = append(userUnits, unitModel.UserUnitModel{
 			UserID:                 input.UserID,
 			UnitID:                 unit.ID,
 			AttemptReading:         0,
 			AttemptEvaluation:      datatypes.JSON([]byte(`{"attempt":0,"grade_evaluation":0}`)),
 			CompleteSectionQuizzes: datatypes.JSON([]byte(`[]`)),
-			TotalSectionQuizzes:    pq.Int64Array{},
+			TotalSectionQuizzes:    pq.Int64Array(sectionQuizIDs),
 			GradeExam:              0,
 			IsPassed:               false,
 			GradeResult:            0,

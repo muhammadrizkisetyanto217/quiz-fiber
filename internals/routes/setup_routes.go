@@ -22,6 +22,7 @@ import (
 
 	// Progress
 	pointRoutes "quiz-fiber/internals/features/progress/point/route"
+	levelRankRoute "quiz-fiber/internals/features/progress/level_rank/route"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -56,6 +57,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 
 	//* Progress
 	pointRoutes.UserPointRoutes(app, db)
+	levelRankRoute.LevelRequirementRoute(app, db)
 
 }
  
