@@ -264,6 +264,13 @@ func (ac *AuthController) ResetPassword(c *fiber.Ctx) error {
 // 🔥 Middleware untuk proteksi route
 func AuthMiddleware(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+
+		// 🚨 Skip middleware untuk Midtrans webhook
+		if c.Path() == "/api/donations/notification" {
+			log.Println("[INFO] Skip AuthMiddleware untuk webhook Midtrans")
+			return c.Next()
+		}
+
 		authHeader := c.Get("Authorization")
 		log.Println("[DEBUG] Authorization Header:", authHeader)
 		if authHeader == "" {
