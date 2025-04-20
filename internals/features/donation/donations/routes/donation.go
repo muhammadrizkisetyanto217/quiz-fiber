@@ -15,12 +15,13 @@ func DonationRoutes(app *fiber.App, db *gorm.DB) {
 	// 🎁 Donasi Routes
 	donationCtrl := controller.NewDonationController(db)
 	donationRoutes := api.Group("/donations")
-	donationRoutes.Post("/", donationCtrl.CreateDonation) // Buat donasi + Snap token
+	donationRoutes.Post("/", donationCtrl.CreateDonation)                   // Buat donasi + Snap token
+	donationRoutes.Get("/", donationCtrl.GetAllDonations)                   // Semua donasi
+	donationRoutes.Get("/user/:user_id", donationCtrl.GetDonationsByUserID) // Donasi per user
 
 	// ✅ Webhook tanpa middleware auth, inject db manual
 	app.Post("/api/donations/notification", func(c *fiber.Ctx) error {
 		c.Locals("db", db)
-		return controller.HandleMidtransNotification(c)
+		return donationCtrl.HandleMidtransNotification(c)
 	})
 }
- 

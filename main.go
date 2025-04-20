@@ -5,9 +5,9 @@ import (
 	"os"
 	"quiz-fiber/internals/configs"
 	"quiz-fiber/internals/database"
+	"quiz-fiber/internals/features/donation/donations/service" // Import controller for donation
 	"quiz-fiber/internals/middleware"
 	"quiz-fiber/internals/routes"
-	"quiz-fiber/internals/features/donation/donations/controller" // Import controller for donation
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -32,8 +32,15 @@ func main() {
 	// ✅ Setup Middleware
 	middleware.SetupMiddleware(app)
 
-	// ✅ Init Snap Midtrans
-	controller.InitMidtrans()
+	// ✅ Ambil MIDTRANS_SERVER_KEY dari .env
+	serverKey := configs.GetEnv("MIDTRANS_SERVER_KEY")
+	if serverKey == "" {
+		log.Fatal("❌ MIDTRANS_SERVER_KEY tidak ditemukan di .env")
+	}
+	
+	// Middleware dan Snap Midtrans
+	middleware.SetupMiddleware(app)
+	service.InitMidtrans(serverKey) // ✅ PASANG PARAMETERNYA
 
 	// ✅ Setup Routes
 	routes.SetupRoutes(app, database.DB)
