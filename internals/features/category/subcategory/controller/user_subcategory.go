@@ -255,24 +255,24 @@ func (ctrl *UserSubcategoryController) GetWithProgressByParam(c *fiber.Ctx) erro
 		return c.Status(500).JSON(fiber.Map{"error": "Gagal ambil progress user"})
 	}
 
-	// Buat map subcategory_id → user progress
-	userSubcatMap := map[int]subcategoryModel.UserSubcategoryModel{}
+	userSubcatMap := map[uint]subcategoryModel.UserSubcategoryModel{}
 	for _, us := range userSubcat {
-		userSubcatMap[us.SubcategoryID] = us
+		userSubcatMap[uint(us.SubcategoryID)] = us
 	}
 
-	// Ambil semua themes_or_levels
-	var themes []struct {
+	type ThemeWithProgress struct {
 		ID            uint           `json:"id"`
 		Name          string         `json:"name"`
 		SubcategoryID uint           `json:"subcategory_id"`
 		GradeResult   int            `json:"grade_result"`
 		CompleteUnit  datatypes.JSON `json:"complete_unit"`
 	}
+
+	var themes []ThemeWithProgress
 	if err := ctrl.DB.Table("themes_or_levels").
 		Select(`themes_or_levels.id, themes_or_levels.name, themes_or_levels.subcategories_id AS subcategory_id,
-				COALESCE(user_themes_or_levels.grade_result, 0) AS grade_result,
-				COALESCE(user_themes_or_levels.complete_unit, '{}'::jsonb) AS complete_unit`).
+			COALESCE(user_themes_or_levels.grade_result, 0) AS grade_result,
+			COALESCE(user_themes_or_levels.complete_unit, '{}'::jsonb) AS complete_unit`).
 		Joins("LEFT JOIN user_themes_or_levels ON user_themes_or_levels.themes_or_levels_id = themes_or_levels.id AND user_themes_or_levels.user_id = ?", userID).
 		Where("themes_or_levels.subcategories_id IN ?", getSubcategoryIDs(subcategories)).
 		Scan(&themes).Error; err != nil {
@@ -280,39 +280,41 @@ func (ctrl *UserSubcategoryController) GetWithProgressByParam(c *fiber.Ctx) erro
 		return c.Status(500).JSON(fiber.Map{"error": "Gagal ambil themes"})
 	}
 
-	// Mapping themes ke masing-masing subcategory
-	themesMap := map[uint][]any{}
+	themesMap := make(map[uint][]ThemeWithProgress)
 	for _, t := range themes {
 		themesMap[t.SubcategoryID] = append(themesMap[t.SubcategoryID], t)
 	}
 
-	// Gabungkan data subcategories dengan user progress dan themes
 	type SubcategoryWithProgress struct {
-		ID                     uint          `json:"id"`
-		Name                   string        `json:"name"`
-		CategoryID             uint          `json:"category_id"`
-		GradeResult            int           `json:"grade_result"`
-		CompleteThemesOrLevels any           `json:"complete_themes_or_levels"`
-		TotalThemesOrLevels    pq.Int64Array `json:"total_themes_or_levels"`
-		ThemesOrLevels         []any         `json:"themes_or_levels"`
+		ID                     uint                `json:"id"`
+		Name                   string              `json:"name"`
+		CategoryID             uint                `json:"category_id"`
+		GradeResult            int                 `json:"grade_result"`
+		CompleteThemesOrLevels any                 `json:"complete_themes_or_levels"`
+		TotalThemesOrLevels    pq.Int64Array       `json:"total_themes_or_levels"`
+		ThemesOrLevels         []ThemeWithProgress `json:"themes_or_levels"`
+		UserSubcategoryID      uint                `json:"user_subcategory_id"`
+		UserID                 uuid.UUID           `json:"user_id"`
+		CreatedAt              time.Time           `json:"created_at"`
 	}
 
 	subcatByCategory := map[uint][]SubcategoryWithProgress{}
 	for _, sub := range subcategories {
-		prog := userSubcatMap[int(sub.ID)]
-
+		prog := userSubcatMap[sub.ID]
 		subcatByCategory[sub.CategoriesID] = append(subcatByCategory[sub.CategoriesID], SubcategoryWithProgress{
 			ID:                     sub.ID,
 			Name:                   sub.Name,
 			CategoryID:             sub.CategoriesID,
 			GradeResult:            prog.GradeResult,
-			CompleteThemesOrLevels: prog.CompleteThemesOrLevels, // default null if not exist
+			CompleteThemesOrLevels: prog.CompleteThemesOrLevels,
 			TotalThemesOrLevels:    sub.TotalThemesOrLevels,
 			ThemesOrLevels:         themesMap[sub.ID],
+			UserSubcategoryID:      prog.ID,
+			UserID:                 prog.UserID,
+			CreatedAt:              prog.CreatedAt,
 		})
 	}
 
-	// Final response
 	type CategoryResponse struct {
 		ID            uint                      `json:"id"`
 		Name          string                    `json:"name"`
@@ -328,13 +330,26 @@ func (ctrl *UserSubcategoryController) GetWithProgressByParam(c *fiber.Ctx) erro
 		})
 	}
 
+	// Tambahkan bagian user_progress dari tabel user_progress
+	var userProgress struct {
+		ID          uint      `json:"id"`
+		UserID      uuid.UUID `json:"user_id"`
+		TotalPoints int       `json:"total_points"`
+		Level       int       `json:"level"`
+		Rank        int       `json:"rank"`
+		LastUpdated time.Time `json:"last_updated"`
+	}
+	if err := ctrl.DB.Table("user_progress").Where("user_id = ?", userID).Scan(&userProgress).Error; err != nil {
+		log.Println("[WARNING] Tidak ada user_progress untuk user ini:", err)
+	}
+
 	return c.JSON(fiber.Map{
-		"message": "Berhasil ambil data lengkap",
-		"data":    result,
+		"message":       "Berhasil ambil data lengkap",
+		"data":          result,
+		"user_progress": userProgress,
 	})
 }
 
-// Helper untuk ambil semua subcategory IDs
 func getSubcategoryIDs(subs []subcategoryModel.SubcategoryModel) []uint {
 	var ids []uint
 	for _, s := range subs {

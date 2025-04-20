@@ -21,12 +21,3 @@ type UserReading struct {
 func (UserReading) TableName() string {
 	return "user_readings"
 }
-
-// // Hook: Saat create → update user_units.is_reading = true
-// func (u *UserReading) AfterCreate(tx *gorm.DB) error {
-// 	return service.UpdateUserUnitFromReading(tx, u.UserID, u.UnitID)
-// }
-
-// func (u *UserReading) AfterDelete(tx *gorm.DB) error {
-// 	return service.CheckAndUnsetUserUnitReadingStatus(tx, u.UserID, u.UnitID)
-// }
