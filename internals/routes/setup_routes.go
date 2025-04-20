@@ -21,8 +21,11 @@ import (
 	tooltipRoute "quiz-fiber/internals/features/utils/tooltip/route"
 
 	// Progress
-	pointRoutes "quiz-fiber/internals/features/progress/point/route"
 	levelRankRoute "quiz-fiber/internals/features/progress/level_rank/route"
+	pointRoutes "quiz-fiber/internals/features/progress/point/route"
+
+	// Donation
+	donationRoutes "quiz-fiber/internals/features/donation/donations/routes"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -59,5 +62,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	pointRoutes.UserPointRoutes(app, db)
 	levelRankRoute.LevelRequirementRoute(app, db)
 
+	//* Donation
+	donationRoutes.DonationRoutes(app, db)
+
 }
- 

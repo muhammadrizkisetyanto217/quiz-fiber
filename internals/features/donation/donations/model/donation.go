@@ -10,7 +10,6 @@ import (
 type Donation struct {
 	ID               uint           `gorm:"primaryKey"`
 	UserID           uuid.UUID      `gorm:"type:uuid"`                           // Relasi ke users
-	DonationProgramID *int          `gorm:"column:donation_program_id"`         // Relasi opsional
 	Amount           int            `gorm:"not null"`                            // Jumlah donasi
 	Message          string         `gorm:"type:text"`                           // Pesan dari donor
 	Status           string         `gorm:"type:varchar(20);default:'pending'"` // pending, paid, expired

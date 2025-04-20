@@ -1,7 +1,6 @@
 CREATE TABLE donations (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    donation_program_id INTEGER REFERENCES donation_programs(id), -- optional, kalau ada program
     amount INTEGER NOT NULL,
     message TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending, paid, expired, canceled
@@ -11,5 +10,6 @@ CREATE TABLE donations (
     payment_method VARCHAR(50),
     paid_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
 );
