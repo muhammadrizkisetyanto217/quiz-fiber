@@ -108,41 +108,61 @@ func (ctrl *DonationController) generateSnapToken(d model.Donation, name string,
 
 // ========== WEBHOOK MIDTRANS ==========
 func HandleMidtransNotification(c *fiber.Ctx) error {
+	log.Println("🔔 [WEBHOOK] Midtrans notification diterima")
+
+	// Parsing body ke map
 	var body map[string]interface{}
 	if err := c.BodyParser(&body); err != nil {
-		log.Println("[ERROR] Webhook invalid:", err)
+		log.Println("[ERROR] Body tidak bisa diparsing:", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid webhook"})
 	}
 
+	// Log isi body
+	log.Printf("📦 Body webhook: %+v\n", body)
+
 	orderID, ok := body["order_id"].(string)
 	if !ok {
+		log.Println("[ERROR] order_id tidak ditemukan di body")
 		return c.Status(400).JSON(fiber.Map{"error": "Missing order_id"})
 	}
-	transactionStatus := body["transaction_status"].(string)
 
+	transactionStatus := body["transaction_status"].(string)
+	log.Println("📄 Order ID:", orderID)
+	log.Println("📌 Transaction Status:", transactionStatus)
+
+	// Ambil database (kalau pakai Locals)
 	db := c.Locals("db").(*gorm.DB)
 
+	// Cari donasi
 	var donation model.Donation
 	if err := db.Where("order_id = ?", orderID).First(&donation).Error; err != nil {
-		log.Println("[ERROR] Order not found:", orderID)
-		return c.SendStatus(200) // Tetap OK biar Midtrans gak retry
+		log.Println("[ERROR] Tidak menemukan donasi dengan order_id:", orderID)
+		return c.SendStatus(200) // Tetap 200 supaya Midtrans tidak retry terus
 	}
 
+	// Proses status
 	switch transactionStatus {
 	case "capture", "settlement":
+		log.Println("✅ Pembayaran berhasil → status diupdate ke paid")
 		now := time.Now()
 		donation.Status = "paid"
 		donation.PaidAt = &now
 	case "expire":
+		log.Println("⚠️ Pembayaran kadaluarsa → status diupdate ke expired")
 		donation.Status = "expired"
 	case "cancel":
+		log.Println("❌ Pembayaran dibatalkan → status diupdate ke canceled")
 		donation.Status = "canceled"
 	default:
-		log.Println("[INFO] Status tidak diproses:", transactionStatus)
+		log.Println("ℹ️ Status transaksi tidak diproses khusus:", transactionStatus)
 	}
 
-	db.Save(&donation)
+	// Simpan update status
+	if err := db.Save(&donation).Error; err != nil {
+		log.Println("[ERROR] Gagal menyimpan update status:", err)
+		return c.SendStatus(500)
+	}
 
-	log.Println("[SUCCESS] Update status:", donation.OrderID, "→", donation.Status)
+	log.Println("✅ [WEBHOOK] Status donasi berhasil diperbarui:", donation.Status)
 	return c.SendStatus(200)
 }

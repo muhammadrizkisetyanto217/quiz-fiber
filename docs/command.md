@@ -42,3 +42,7 @@ rahasia_dong
 
 # Mencari kata 
 muhammadrizkisetyanto@MacBook-Air-Muhammad arabiya-syari-fiber-1 % grep -r "subategories_id" .
+
+
+# Midtrans 
+https://simulator.sandbox.midtrans.com/
