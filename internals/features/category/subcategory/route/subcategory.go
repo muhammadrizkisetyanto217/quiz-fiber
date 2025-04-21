@@ -20,6 +20,7 @@ func CategoryRoutes(app *fiber.App, db *gorm.DB) {
 	subcategoryRoutes.Get("/", subcategoryCtrl.GetSubcategories)
 	subcategoryRoutes.Get("/:id", subcategoryCtrl.GetSubcategory)
 	subcategoryRoutes.Get("/category/:category_id", subcategoryCtrl.GetSubcategoriesByCategory)
+	subcategoryRoutes.Get("/with-category-themes/:difficulty_id", subcategoryCtrl.GetCategoryWithSubcategoryAndThemes) 
 	subcategoryRoutes.Post("/", subcategoryCtrl.CreateSubcategory)
 	subcategoryRoutes.Put("/:id", subcategoryCtrl.UpdateSubcategory)
 	subcategoryRoutes.Delete("/:id", subcategoryCtrl.DeleteSubcategory)

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"log"
+	categoryModel "quiz-fiber/internals/features/category/category/model"
 	"quiz-fiber/internals/features/category/subcategory/model"
 
 	"github.com/gofiber/fiber/v2"
@@ -182,5 +183,30 @@ func (sc *SubcategoryController) DeleteSubcategory(c *fiber.Ctx) error {
 	log.Printf("[SUCCESS] Subcategory with ID %s deleted\n", id)
 	return c.JSON(fiber.Map{
 		"message": "Subcategory deleted successfully",
+	})
+}
+
+func (sc *SubcategoryController) GetCategoryWithSubcategoryAndThemes(c *fiber.Ctx) error {
+	difficultyID := c.Params("difficulty_id")
+	log.Printf("[INFO] Fetching category, subcategory, and themes for difficulty ID: %s\n", difficultyID)
+
+	// Ambil semua kategori yang punya difficulty_id tertentu
+	var categories []categoryModel.CategoryModel
+	if err := sc.DB.
+		Where("difficulty_id = ?", difficultyID).
+		Preload("Subcategories", func(db *gorm.DB) *gorm.DB {
+			return db.
+				Where("status = ?", "active").
+				Preload("ThemesOrLevels") // preload semua themes dari subcategory
+		}).
+		Find(&categories).Error; err != nil {
+		log.Printf("[ERROR] Failed to fetch categories: %v\n", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Gagal mengambil data kategori"})
+	}
+
+	log.Printf("[SUCCESS] Retrieved %d categories with subcategories and themes for difficulty ID %s\n", len(categories), difficultyID)
+	return c.JSON(fiber.Map{
+		"message": "Berhasil mengambil data kategori lengkap",
+		"data":    categories,
 	})
 }
