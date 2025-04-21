@@ -29,6 +29,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
+
+
+	// Kajian Attendance
+	kajianAttendanceRoute "quiz-fiber/internals/features/ms/route"
 )
 
 // Register routes
@@ -64,5 +68,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 
 	//* Donation
 	donationRoutes.DonationRoutes(app, db)
+
+
+	//* Kajian Attendance
+	kajianAttendanceRoute.KajianAttendanceRoutes(app, db)
 
 }
