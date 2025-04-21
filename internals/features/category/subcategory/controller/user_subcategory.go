@@ -251,10 +251,19 @@ func (ctrl *UserSubcategoryController) GetWithProgressByParam(c *fiber.Ctx) erro
 
 	// Step 4: Build response akhir
 	type ThemeWithProgress struct {
-		ID           uint           `json:"id"`
-		Name         string         `json:"name"`
-		GradeResult  int            `json:"grade_result"`
-		CompleteUnit datatypes.JSON `json:"complete_unit"`
+		ID               uint           `json:"id"`
+		Name             string         `json:"name"`
+		Status           string         `json:"status"`
+		DescriptionShort string         `json:"description_short"`
+		DescriptionLong  string         `json:"description_long"`
+		TotalUnit        pq.Int64Array  `json:"total_unit"`
+		ImageURL         string         `json:"image_url"`
+		UpdateNews       datatypes.JSON `json:"update_news"`
+		CreatedAt        time.Time      `json:"created_at"`
+		UpdatedAt        *time.Time     `json:"updated_at"`
+		SubcategoriesID  uint           `json:"subcategories_id"`
+		GradeResult      int            `json:"grade_result"`
+		CompleteUnit     datatypes.JSON `json:"complete_unit"`
 	}
 
 	type SubcategoryWithProgress struct {
@@ -305,18 +314,26 @@ func (ctrl *UserSubcategoryController) GetWithProgressByParam(c *fiber.Ctx) erro
 
 			var themes []ThemeWithProgress
 			for _, theme := range sub.ThemesOrLevels {
-				ut := userThemeMap[theme.ID]
-				rawJSON, _ := json.Marshal(ut.CompleteUnit)
+				userTheme := userThemeMap[theme.ID]
+				rawJSON, _ := json.Marshal(userTheme.CompleteUnit)
 
 				themes = append(themes, ThemeWithProgress{
-					ID:           theme.ID,
-					Name:         theme.Name,
-					GradeResult:  ut.GradeResult,
-					CompleteUnit: datatypes.JSON(rawJSON),
+					ID:               theme.ID,
+					Name:             theme.Name,
+					Status:           theme.Status,
+					DescriptionShort: theme.DescriptionShort,
+					DescriptionLong:  theme.DescriptionLong,
+					TotalUnit:        theme.TotalUnit,
+					ImageURL:         theme.ImageURL,
+					UpdateNews:       theme.UpdateNews,
+					CreatedAt:        theme.CreatedAt,
+					UpdatedAt:        theme.UpdatedAt,
+					SubcategoriesID:  uint(theme.SubcategoriesID),
+					GradeResult:      userTheme.GradeResult,
+					CompleteUnit:     datatypes.JSON(rawJSON),
 				})
-
-				if ut.GradeResult > 0 {
-					totalGrade += ut.GradeResult
+				if userTheme.GradeResult > 0 {
+					totalGrade += userTheme.GradeResult
 					totalCount++
 				}
 			}
@@ -357,7 +374,7 @@ func (ctrl *UserSubcategoryController) GetWithProgressByParam(c *fiber.Ctx) erro
 			DifficultyID:       cat.DifficultyID,
 			CreatedAt:          cat.CreatedAt,
 			// UpdatedAt:          cat.UpdatedAt,
-			Subcategories:      subcatWithProgress,
+			Subcategories: subcatWithProgress,
 		})
 	}
 
