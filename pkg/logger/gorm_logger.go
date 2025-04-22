@@ -19,6 +19,7 @@ func NewGormLogger() logger.Interface {
 		SlowThreshold: 200 * time.Millisecond,
 		LogLevel:      logger.Info,
 	}
+	
 }
 
 func (l *GormLogger) LogMode(level logger.LogLevel) logger.Interface {

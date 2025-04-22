@@ -53,7 +53,7 @@ func GetEnv(key string, defaultValue ...string) string {
 // DATABASE CONNECTOR
 // =======================
 func InitDB() *gorm.DB {
-	dsn := GetEnv("DATABASE_URL")
+	dsn := GetEnv("DB_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: NewGormLogger(), // pakai logger custom
 	})

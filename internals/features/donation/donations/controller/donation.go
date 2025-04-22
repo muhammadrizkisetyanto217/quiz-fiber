@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
+
 type DonationController struct {
 	DB *gorm.DB
 }

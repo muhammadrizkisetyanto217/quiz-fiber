@@ -1,7 +1,7 @@
 package services
 
 import (
-	addUserPointService "quiz-fiber/internals/features/progress/point/service"
+	addUserPointService "quiz-fiber/internals/features/progress/points/service"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

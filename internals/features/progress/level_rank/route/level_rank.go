@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 
 	levelController "quiz-fiber/internals/features/progress/level_rank/controller"
-	userController "quiz-fiber/internals/features/user/auth/controller"
+	userController "quiz-fiber/internals/features/users/auth/controller"
 )
 
 func LevelRequirementRoute(app *fiber.App, db *gorm.DB) {

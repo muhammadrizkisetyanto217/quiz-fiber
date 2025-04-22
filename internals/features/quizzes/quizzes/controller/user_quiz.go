@@ -7,7 +7,7 @@ import (
 	"quiz-fiber/internals/features/quizzes/quizzes/model"
 	"quiz-fiber/internals/features/quizzes/quizzes/services"
 
-	unitModel "quiz-fiber/internals/features/category/units/model"
+	unitModel "quiz-fiber/internals/features/lessons/units/model"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

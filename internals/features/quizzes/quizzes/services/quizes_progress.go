@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	userUnitModel "quiz-fiber/internals/features/category/units/model"
+	userUnitModel "quiz-fiber/internals/features/lessons/units/model"
 	quizzesModel "quiz-fiber/internals/features/quizzes/quizzes/model"
 
 	"github.com/google/uuid"

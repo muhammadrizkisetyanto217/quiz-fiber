@@ -2,7 +2,7 @@ package route
 
 import (
 	"quiz-fiber/internals/features/donation/donations/controller"
-	userController "quiz-fiber/internals/features/user/auth/controller"
+	userController "quiz-fiber/internals/features/users/auth/controller"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"

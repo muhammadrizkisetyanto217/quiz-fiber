@@ -2,27 +2,27 @@ package routes
 
 import (
 	// Add this line.
-	categoryRoute "quiz-fiber/internals/features/category/category/route"
-	difficultyRoute "quiz-fiber/internals/features/category/difficulty/route"
-	subcategoryRoute "quiz-fiber/internals/features/category/subcategory/route"
-	themesOrLevles "quiz-fiber/internals/features/category/themes_or_levels/route"
-	units "quiz-fiber/internals/features/category/units/route"
-	authRoute "quiz-fiber/internals/features/user/auth/route"
-	userRoute "quiz-fiber/internals/features/user/user/route"
+	categoryRoute "quiz-fiber/internals/features/lessons/categories/route"
+	difficultyRoute "quiz-fiber/internals/features/lessons/difficulty/route"
+	subcategoryRoute "quiz-fiber/internals/features/lessons/subcategory/route"
+	themesOrLevles "quiz-fiber/internals/features/lessons/themes_or_levels/route"
+	units "quiz-fiber/internals/features/lessons/units/route"
+	authRoute "quiz-fiber/internals/features/users/auth/route"
+	userRoute "quiz-fiber/internals/features/users/user/route"
 
 	// Quizzes
-	evaluationRoute "quiz-fiber/internals/features/quizzes/evaluation/route"
-	examRoute "quiz-fiber/internals/features/quizzes/exam/route"
-	questionRoute "quiz-fiber/internals/features/quizzes/question/route"
+	evaluationRoute "quiz-fiber/internals/features/quizzes/evaluations/route"
+	examRoute "quiz-fiber/internals/features/quizzes/exams/route"
+	questionRoute "quiz-fiber/internals/features/quizzes/questions/route"
 	SectionQuizzesRoutes "quiz-fiber/internals/features/quizzes/quizzes/route"
-	readingRoute "quiz-fiber/internals/features/quizzes/reading/route"
+	readingRoute "quiz-fiber/internals/features/quizzes/readings/route"
 
 	// Utils
-	tooltipRoute "quiz-fiber/internals/features/utils/tooltip/route"
+	tooltipRoute "quiz-fiber/internals/features/utils/tooltips/route"
 
 	// Progress
 	levelRankRoute "quiz-fiber/internals/features/progress/level_rank/route"
-	pointRoutes "quiz-fiber/internals/features/progress/point/route"
+	pointRoutes "quiz-fiber/internals/features/progress/points/route"
 
 	// Donation
 	donationRoutes "quiz-fiber/internals/features/donation/donations/routes"
