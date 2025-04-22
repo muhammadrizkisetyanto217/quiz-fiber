@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"quiz-fiber/internals/features/donation/donations/dto"
-	"quiz-fiber/internals/features/donation/donations/model"
-	donationService "quiz-fiber/internals/features/donation/donations/service"
+	"quiz-fiber/internals/features/donations/donations/dto"
+	"quiz-fiber/internals/features/donations/donations/model"
+	donationService "quiz-fiber/internals/features/donations/donations/service"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

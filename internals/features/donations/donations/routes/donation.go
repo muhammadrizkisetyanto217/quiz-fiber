@@ -1,7 +1,7 @@
 package route
 
 import (
-	"quiz-fiber/internals/features/donation/donations/controller"
+	"quiz-fiber/internals/features/donations/donations/controller"
 	userController "quiz-fiber/internals/features/users/auth/controller"
 
 	"github.com/gofiber/fiber/v2"

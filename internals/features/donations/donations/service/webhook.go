@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"quiz-fiber/internals/features/donation/donations/model"
+	"quiz-fiber/internals/features/donations/donations/model"
 
 	"gorm.io/gorm"
 )

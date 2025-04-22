@@ -25,7 +25,7 @@ import (
 	pointRoutes "quiz-fiber/internals/features/progress/points/route"
 
 	// Donation
-	donationRoutes "quiz-fiber/internals/features/donation/donations/routes"
+	donationRoutes "quiz-fiber/internals/features/donations/donations/routes"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"

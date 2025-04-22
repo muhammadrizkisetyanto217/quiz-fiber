@@ -5,7 +5,7 @@ import (
 	"os"
 	"quiz-fiber/internals/configs"
 	"quiz-fiber/internals/database"
-	"quiz-fiber/internals/features/donation/donations/service" // Import controller for donation
+	"quiz-fiber/internals/features/donations/donations/service" // Import controller for donation
 	"quiz-fiber/internals/middleware"
 	"quiz-fiber/internals/routes"
 

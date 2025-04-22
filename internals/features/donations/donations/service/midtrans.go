@@ -1,7 +1,7 @@
 package service
 
 import (
-	"quiz-fiber/internals/features/donation/donations/model"
+	"quiz-fiber/internals/features/donations/donations/model"
 
 	midtrans "github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
