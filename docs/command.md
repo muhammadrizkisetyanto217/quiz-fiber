@@ -46,3 +46,7 @@ muhammadrizkisetyanto@MacBook-Air-Muhammad arabiya-syari-fiber-1 % grep -r "suba
 
 # Midtrans 
 https://simulator.sandbox.midtrans.com/
+
+
+# Password
+Wedangjahe217312!

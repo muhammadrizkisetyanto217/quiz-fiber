@@ -1,24 +1,24 @@
 [
     {
-        "name": "Umum 2",
+        "name": "Umum",
         "description_short": "Tingkat Umum",
         "description_long": "Mengenal islam lebih dekat",
         "status": "active"
     },
     {
-        "name": "Lanjutan 2",
+        "name": "Lanjutan",
         "description_short": "Tingkat Lanjutan",
         "description_long": "Mengenal islam lebih dekat",
         "status": "active"
     },
     {
-        "name": "Penuntut Ilmu 2",
+        "name": "Penuntut Ilmu",
         "description_short": "Tingkat Penuntut Ilmu",
         "description_long": "Mengenal islam lebih dekat",
         "status": "active"
     },
     {
-        "name": "Dasar Islam 2",
+        "name": "Dasar Islam",
         "description_short": "Tingkat Dasar Islam",
         "description_long": "Mengenal islam lebih dekat",
         "status": "active"

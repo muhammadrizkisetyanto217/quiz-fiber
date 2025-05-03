@@ -1,6 +1,3 @@
--- ========================
--- TABEL: user_readings
--- ========================
 CREATE TABLE IF NOT EXISTS user_readings (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -20,9 +17,7 @@ ON user_readings (user_id, unit_id);
 
 ANALYZE user_readings;
 
--- ========================
--- TABEL: user_evaluations
--- ========================
+
 CREATE TABLE IF NOT EXISTS user_evaluations (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -40,9 +35,7 @@ CREATE TABLE IF NOT EXISTS user_evaluations (
 -- CREATE INDEX IF NOT EXISTS idx_eval_user_unit ON user_evaluations (user_id, unit_id);
 -- ANALYZE user_evaluations;
 
--- ========================
--- TABEL: user_exams
--- ========================
+
 CREATE TABLE IF NOT EXISTS user_exams (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

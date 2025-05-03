@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS exams (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
-    unit_id INT REFERENCES units(id) ON DELETE CASCADE, -- ✅ Perbaiki "unit_Id" menjadi "unit_id"
+    unit_id INT REFERENCES units(id) ON DELETE CASCADE, 
     created_by UUID REFERENCES users(id) ON DELETE CASCADE
 );
 

@@ -1,27 +1,27 @@
 [
     {
-        "name": "Fiqh Sholat Jilid 20",
+        "name": "Aqidah",
         "description_short": "Hukum-hukum ibadah dalam Islam",
         "description_long": "Kategori ini mencakup hukum-hukum ibadah seperti shalat, puasa, zakat, dan haji berdasarkan dalil-dalil yang kuat.",
         "status": "active",
         "difficulty_id": 1
     },
     {
-        "name": "Fiqh Sholat Jilid 30",
+        "name": "Fiqh Syafi'i",
         "description_short": "Hukum-hukum ibadah dalam Islam",
         "description_long": "Kategori ini mencakup hukum-hukum ibadah seperti shalat, puasa, zakat, dan haji berdasarkan dalil-dalil yang kuat.",
         "status": "active",
         "difficulty_id": 1
     },
     {
-        "name": "Fiqh Sholat Jilid 40",
+        "name": "Sejarah",
         "description_short": "Hukum-hukum ibadah dalam Islam",
         "description_long": "Kategori ini mencakup hukum-hukum ibadah seperti shalat, puasa, zakat, dan haji berdasarkan dalil-dalil yang kuat.",
         "status": "active",
         "difficulty_id": 1
     },
     {
-        "name": "Fiqh Sholat Jilid 50",
+        "name": "Hadist",
         "description_short": "Hukum-hukum ibadah dalam Islam",
         "description_long": "Kategori ini mencakup hukum-hukum ibadah seperti shalat, puasa, zakat, dan haji berdasarkan dalil-dalil yang kuat.",
         "status": "active",

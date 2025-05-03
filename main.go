@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+
 func main() {
 	configs.LoadEnv()
 
@@ -28,6 +29,8 @@ func main() {
 	database.ConnectDB()
 
 	app := fiber.New()
+
+	
 
 	// ✅ Setup Middleware
 	middleware.SetupMiddleware(app)

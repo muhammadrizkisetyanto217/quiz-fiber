@@ -48,7 +48,7 @@ func (uc *UserController) GetUsers(c *fiber.Ctx) error {
 }
 
 // GET user by ID
-func (uc *UserController) GetUser(c *fiber.Ctx) error {
+func (uc *UserController) GetUserById(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	userID, err := uuid.Parse(idStr)
 	if err != nil {
@@ -109,22 +109,25 @@ func (uc *UserController) UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var user models.UserModel
 
-	if err := uc.DB.First(&user, id).Error; err != nil {
+	// ✅ Perbaikan: gunakan WHERE agar UUID tidak dianggap angka
+	if err := uc.DB.Where("id = ?", id).First(&user).Error; err != nil {
 		log.Println("[ERROR] User not found:", err)
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
+	// 📦 Parsing body ke struct user
 	if err := c.BodyParser(&user); err != nil {
 		log.Println("[ERROR] Invalid input for update:", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
+	// 💾 Simpan perubahan
 	if err := uc.DB.Save(&user).Error; err != nil {
 		log.Println("[ERROR] Failed to update user:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update user"})
 	}
 
-	log.Printf("[SUCCESS] User updated: ID=%d\n", user.ID)
+	log.Printf("[SUCCESS] User updated: ID=%s\n", user.ID)
 	return c.JSON(fiber.Map{
 		"message": "User updated successfully",
 		"data":    user,
